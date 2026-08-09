@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Party Games Hub</title>
+  
+  <!-- Google Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- CSS Styles -->
+  <link rel="stylesheet" href="/css/style.css">
+
+  <!-- Socket.io Client Library -->
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <div id="app" class="app-container">
+    
+    <!-- Top Navigation Header -->
+      <div class="header-brand" id="btnHomeBrand">
+        <span class="brand-icon">🎮</span>
+        <span class="brand-title">Games Hub</span>
+        <div id="headerUserBadge" class="header-user-badge hidden">
+          <span id="headerAvatar">😎</span>
+          <span id="headerPlayerName">Player</span>
+        </div>
+      </div>
+      
+      <div class="header-actions">
+        <div class="header-row-top">
+          <button id="btnToggleMute" class="btn btn-glass btn-sm">
+            <span id="soundIcon">🔊</span>
+          </button>
+          <button id="btnQRHeader" class="btn btn-glass btn-sm hidden">
+            <span>📱</span> Share Link
+          </button>
+        </div>
+        <div class="header-row-bottom">
+          <div id="networkBadge" class="network-badge">
+            <span class="status-dot"></span>
+            <span id="networkIpText">Detecting Wi-Fi...</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Shell -->
+    <main class="app-main">
+      
+      <!-- ================= 1. HOME VIEW ================= -->
+      <section id="viewHome" class="view-section active">
+        <div class="hero-card glass-panel">
+          <h1 class="hero-title">Party Games Hub</h1>
+          <p class="hero-subtitle">Play multi-device party games with friends on your local Wi-Fi. No apps required!</p>
+          
+          <div class="player-input-card">
+            <label for="inputPlayerName" class="form-label">Your Nickname</label>
+            <div class="name-input-group">
+              <select id="selectAvatar" class="avatar-select">
+                <option value="😎">😎</option>
+                <option value="🦁">🦁</option>
+                <option value="🦊">🦊</option>
+                <option value="🚀">🚀</option>
+                <option value="👾">👾</option>
+                <option value="👑">👑</option>
+                <option value="🍕">🍕</option>
+                <option value="🔥">🔥</option>
+                <option value="👻">👻</option>
+              </select>
+              <input type="text" id="inputPlayerName" class="form-control" placeholder="Enter your name" maxlength="15">
+            </div>
+          </div>
+
+          <div class="home-actions">
+            <button id="btnEnterHub" class="btn btn-primary btn-lg btn-block">
+              <span>🚀</span> Enter Game Hub
+            </button>
+          </div>
+        </div>
+
+        <!-- Featured Games Gallery -->
+        <div class="games-gallery">
+          <h2 class="gallery-title">Available Games</h2>
+          <div id="gamesContainer" class="games-grid">
+            <!-- Dynamically populated game cards -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 2. ROOM LOBBY VIEW ================= -->
+      <section id="viewLobby" class="view-section hidden">
+      <!-- Player Nickname Banner -->
+        <div id="lobbyNicknameBanner" class="glass-panel nickname-banner">
+          <span class="nickname-label">Playing as</span>
+          <span id="lobbyNicknameAvatar" class="nickname-avatar">😎</span>
+          <span id="lobbyNicknameText" class="nickname-name">Player</span>
+        </div>
+
+
+        <div id="hostGameSelector" class="glass-panel game-selector-panel">
+          <div class="panel-header-with-action">
+            <h3>Select Game to Play</h3>
+            <button id="btnOpenSettings" class="btn btn-glass btn-xs">
+              ⚙️ Game House Rules & Settings
+            </button>
+          </div>
+          <div id="lobbyGamesList" class="lobby-games-grid"></div>
+        </div>
+
+        <!-- Pre-Game Team Roster & Selection Panel (Shown for Codenames) -->
+        <div id="lobbyTeamRoster" class="glass-panel team-roster-panel">
+          <div class="panel-header-with-action">
+            <h3>👥 Team Roster & Roles</h3>
+            <span id="spymasterReqBadge" class="requirement-badge warning-badge">⚠️ Claim Both Spymasters to Start</span>
+          </div>
+
+          <div class="team-columns-grid">
+            <!-- RED TEAM COLUMN -->
+            <div class="team-card red-team-card">
+              <div class="team-card-header">
+                <h4>🔴 RED TEAM</h4>
+                <button id="btnJoinRed" class="btn btn-danger btn-xs">Join Red</button>
+              </div>
+              <div class="spymaster-row">
+                <span>Spymaster:</span>
+                <strong id="redSpymasterName">Vacant</strong>
+                <button id="btnClaimRedSpyLobby" class="btn btn-primary btn-xs">Claim</button>
+              </div>
+              <div id="redPlayersList" class="team-player-list"></div>
+            </div>
+
+            <!-- BLUE TEAM COLUMN -->
+            <div class="team-card blue-team-card">
+              <div class="team-card-header">
+                <h4>🔵 BLUE TEAM</h4>
+                <button id="btnJoinBlue" class="btn btn-secondary btn-xs">Join Blue</button>
+              </div>
+              <div class="spymaster-row">
+                <span>Spymaster:</span>
+                <strong id="blueSpymasterName">Vacant</strong>
+                <button id="btnClaimBlueSpyLobby" class="btn btn-primary btn-xs">Claim</button>
+              </div>
+              <div id="bluePlayersList" class="team-player-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Players List -->
+        <div class="glass-panel players-panel">
+          <div class="panel-header">
+            <h3>Connected Players (<span id="playerCount">0</span>)</h3>
+          </div>
+          <div id="playersList" class="players-grid">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- Lobby Controls -->
+        <div class="lobby-controls">
+          <button id="btnStartGame" class="btn btn-success btn-lg btn-block hidden">
+            🚀 Start Game
+          </button>
+          <button id="btnLeaveRoom" class="btn btn-outline-danger btn-sm">
+            🛋 Leave Room
+          </button>
+        </div>
+      </section>
+
+      <!-- ================= 3. CODENAMES GAME VIEW ================= -->
+      <section id="viewCodenames" class="view-section hidden">
+        <div class="game-header glass-panel">
+          <div class="score-pill red-score">
+            <span>RED:</span> <strong id="cnRedScore">8</strong>
+          </div>
+
+          <div class="turn-banner" id="cnTurnBanner">
+            <div id="cnTurnText">RED TEAM'S TURN</div>
+            <div id="cnTimerContainer" class="cn-timer-badge hidden">
+              ⏱️ <span id="cnTimerText">120s</span>
+            </div>
+          </div>
+
+          <div class="score-pill blue-score">
+            <span>BLUE:</span> <strong id="cnBlueScore">7</strong>
+          </div>
+        </div>
+
+        <!-- Spymaster Passcode & Mode Toggle -->
+        <div class="spymaster-bar glass-panel">
+          <div class="spymaster-status">
+            <span>Your Role:</span> <strong id="cnMyRoleText">Operative</strong>
+          </div>
+          <div class="spymaster-actions">
+            <button id="btnCNRestart" class="btn btn-warning btn-xs">
+              🔄 Restart Game
+            </button>
+            <button id="btnCNLeave" class="btn btn-danger btn-xs">
+              🚪 Lobby
+            </button>
+          </div>
+        </div>
+
+        <!-- Prominent Turn Status Banner -->
+        <div id="cnTurnStatusBanner" class="cn-turn-status-banner banner-waiting">
+          <div id="cnTurnStatusText">Waiting for turn...</div>
+        </div>
+
+        <!-- Clue Display / Input Bar -->
+        <div id="cnClueBar" class="clue-bar glass-panel">
+          <div id="cnClueDisplay" class="clue-display">
+            <span>Current Clue:</span> <strong id="cnClueWord">None</strong> &mdash; Given: <span id="cnClueGiven">0</span> | Left: <span id="cnClueCount">0</span>
+          </div>
+          <div id="cnClueInputContainer" class="clue-input-form hidden">
+            <input type="text" id="inputCNClueWord" class="form-control clue-word-input" placeholder="Clue word (e.g. Ocean)">
+            <select id="selectCNClueCount" class="form-control clue-count-select">
+              <option value="1">1 Card</option>
+              <option value="2">2 Cards</option>
+              <option value="3">3 Cards</option>
+              <option value="4">4 Cards</option>
+              <option value="5">5 Cards</option>
+              <option value="0">Unlimited (0)</option>
+            </select>
+            <button id="btnCNSubmitClue" class="btn btn-give-clue">Give Clue ➔</button>
+          </div>
+        </div>
+
+        <!-- Operative Turn Control Bar -->
+        <div id="cnOperativeActionBar" class="operative-action-bar hidden">
+          <div class="action-bar-info">
+            <span>🎯 Your Team's Turn &mdash; Tap Cards or Pass</span>
+          </div>
+          <button id="btnCNEndTurn" class="btn btn-warning btn-md">⏭️ Pass Turn</button>
+        </div>
+
+        <!-- 5x5 Card Grid -->
+        <div id="cnGrid" class="codenames-grid">
+          <!-- 25 cards populated dynamically -->
+        </div>
+
+        <!-- Game Log -->
+        <div class="glass-panel log-panel">
+          <h4>Game Log</h4>
+          <div id="cnLogContainer" class="log-container"></div>
+        </div>
+
+        <!-- Team Members & Spymasters Roster Panel at Bottom -->
+        <div id="cnTeamRosterPanel" class="glass-panel team-roster-panel">
+          <h4>📋 Team Members & Spymasters</h4>
+          <div class="team-roster-grid">
+            <div class="team-roster-column red-column">
+              <div class="column-header red-header">🚩 RED TEAM</div>
+              <div class="roster-role-group">
+                <span class="role-label">Spymaster:</span>
+                <div id="cnRedSpymasterDisplay" class="roster-player-name">--</div>
+              </div>
+              <div class="roster-role-group">
+                <span class="role-label">Operatives:</span>
+                <div id="cnRedOperativesDisplay" class="roster-player-list">--</div>
+              </div>
+            </div>
+
+            <div class="team-roster-column blue-column">
+              <div class="column-header blue-header">🔵 BLUE TEAM</div>
+              <div class="roster-role-group">
+                <span class="role-label">Spymaster:</span>
+                <div id="cnBlueSpymasterDisplay" class="roster-player-name">--</div>
+              </div>
+              <div class="roster-role-group">
+                <span class="role-label">Operatives:</span>
+                <div id="cnBlueOperativesDisplay" class="roster-player-list">--</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 4. SPY (SPYFALL) GAME VIEW ================= -->
+      <section id="viewSpy" class="view-section hidden">
+        <div class="game-header glass-panel">
+          <div class="timer-display" id="spyTimerDisplay">
+            <span id="spyPhaseBadge" class="phase-badge">💬 DISCUSSION</span>
+            ⏱️ <span id="spyTimerText">05:00</span>
+          </div>
+          <div class="game-header-actions">
+            <button id="btnSpyRestart" class="btn btn-warning btn-xs">
+              🔄 Restart Game
+            </button>
+            <button id="btnSpyLeave" class="btn btn-danger btn-xs">
+              🚪 Lobby
+            </button>
+          </div>
+        </div>
+
+        <!-- Secret Role Card (Tap to Peek) -->
+        <div class="secret-card-container">
+          <div id="spySecretCard" class="secret-card glass-panel">
+            <div class="secret-card-front">
+              <span class="peek-icon">👁️</span>
+              <h3>Tap & Hold to Peek Role</h3>
+              <p class="peek-hint">Keep hidden from friends sitting next to you!</p>
+            </div>
+            <div class="secret-card-back">
+              <div class="category-badge" id="spyCategoryBadge">Category</div>
+              <h2 id="spyLocationTitle" class="secret-location">Location</h2>
+              <div class="role-badge hidden" id="spyRoleBadge"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 20-Second Cover-Typing & Imposter Guess Phase Container -->
+        <div id="spyTypingContainer" class="glass-panel typing-panel hidden">
+          <div class="typing-header">
+            <h3>⌨️ 20-Second Cover-Typing Phase</h3>
+            <div class="typing-timer-badge">⏱️ <span id="spyTypingTimerText">20s</span></div>
+          </div>
+          <p class="panel-subtitle">Everyone must type on your device so Impostors remain camouflaged!</p>
+
+          <!-- Imposter View: Guess Field -->
+          <div id="spyImposterGuessForm" class="imposter-guess-box hidden">
+            <div class="camouflage-target" style="margin-bottom: 8px;">
+              <span style="font-size: 0.85rem; color: #f87171; display: block; font-weight: 700;">🎯 Type Secret Location OR type "PASS" to bypass without guessing:</span>
+            </div>
+            <div class="guess-input-group" style="display: flex; gap: 8px;">
+              <input type="text" id="inputSpyPhaseGuess" class="form-control" placeholder="Type secret word or 'PASS'...">
+              <button id="btnSubmitSpyPhaseGuess" class="btn btn-danger btn-md">Submit</button>
+            </div>
+            <div id="spyImposterCamouflageStatus" class="camouflage-status hidden" style="margin-top: 8px; font-weight: 700; color: #34d399;">✅ Camouflage Complete! Waiting for voting phase...</div>
+          </div>
+
+          <!-- Innocent View: Camouflage Word Challenge -->
+          <div id="spyInnocentCamouflageForm" class="camouflage-box hidden">
+            <div class="camouflage-target" style="margin-bottom: 8px;">
+              <span style="font-size: 0.85rem; color: #94a3b8; display: block;">Type this exact word:</span>
+              <strong id="spyCamouflageWordDisplay" style="font-size: 1.3rem; color: #60a5fa; font-family: var(--font-heading); letter-spacing: 1px;">PARACHUTE</strong>
+            </div>
+            <div class="guess-input-group" style="display: flex; gap: 8px;">
+              <input type="text" id="inputSpyCamouflage" class="form-control" placeholder="Type word above...">
+              <button id="btnSubmitCamouflage" class="btn btn-accent btn-md">Verify</button>
+            </div>
+            <div id="spyCamouflageStatus" class="camouflage-status hidden" style="margin-top: 8px; font-weight: 700; color: #34d399;">✅ Camouflage Complete! Waiting for voting phase...</div>
+          </div>
+        </div>
+
+        <!-- Voting Grid Container (1-Minute Phase) -->
+        <div id="spyVotingContainer" class="glass-panel voting-panel hidden">
+          <h3>🗳️ 1-Minute Voting Phase</h3>
+          <p class="panel-subtitle">Cast your 1 vote to eliminate a suspect!</p>
+          <div id="spyVotingStatus" class="voting-status-text"></div>
+          <div id="spyVotingGrid" class="voting-grid"></div>
+        </div>
+
+        <!-- Tally Results Container (10-Second Display) -->
+        <div id="spyTallyContainer" class="glass-panel tally-panel hidden">
+          <h3>📊 Voting Round Tally</h3>
+          <div id="spyTallyResultBanner" class="tally-banner"></div>
+          <div id="spyTallyGrid" class="tally-grid"></div>
+        </div>
+
+        <!-- Game Log -->
+        <div class="glass-panel log-panel">
+          <h4>Game Log</h4>
+          <div id="spyLogContainer" class="log-container"></div>
+        </div>
+
+        <!-- Party Players Roster Panel at Bottom -->
+        <div id="spyPlayersRosterPanel" class="glass-panel team-roster-panel">
+          <h4>👥 Party Players in Match</h4>
+          <div id="spyPlayersRosterList" class="roster-player-list" style="flex-direction: row; flex-wrap: wrap; gap: 8px;"></div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ================= MODALS ================= -->
+    
+    <!-- QR Code & Share Modal -->
+    <div id="modalQR" class="modal-overlay hidden">
+      <div class="modal-card glass-panel">
+        <button id="btnCloseQR" class="btn-close">&times;</button>
+        <h3>Scan to Join Game</h3>
+        <p class="modal-subtitle">Point phone camera to open in browser</p>
+        <div class="qr-container">
+          <img id="modalQRImg" src="" alt="QR Code">
+        </div>
+        <div class="url-copy-box">
+          <input type="text" id="modalUrlInput" class="form-control url-input-small" readonly>
+          <button id="btnCopyUrl" class="btn btn-accent btn-md btn-block">📋 Copy Link</button>
+        </div>
+        <a id="btnMessengerShare" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-messenger btn-block btn-md">
+          💬 Share in Messenger
+        </a>
+      </div>
+    </div>
+
+
+
+    <!-- Game House Rules & Settings Modal -->
+    <div id="modalSettings" class="modal-overlay hidden">
+      <div class="modal-card glass-panel settings-modal-card">
+        <button id="btnCloseSettings" class="btn-close">&times;</button>
+        <h3>⚙️ Game House Rules & Settings</h3>
+        <p class="modal-subtitle">Customize controversial rules, timers, and game variants</p>
+        
+        <div id="settingsSchemaContainer" class="settings-schema-form">
+          <!-- Dynamically populated per selected game -->
+        </div>
+
+        <button id="btnSaveSettings" class="btn btn-primary btn-block btn-md" style="margin-top: 15px;">
+          💾 Save Settings
+        </button>
+      </div>
+    </div>
+
+    <!-- In-Game Custom Confirm / Alert Modal -->
+    <div id="modalConfirm" class="modal-overlay hidden">
+      <div class="modal-card glass-panel confirm-modal-card">
+        <h3 id="modalConfirmTitle">Confirmation</h3>
+        <p id="modalConfirmMessage" class="modal-subtitle">Are you sure?</p>
+        <div class="modal-confirm-actions">
+          <button id="btnModalCancel" class="btn btn-secondary btn-md">Cancel</button>
+          <button id="btnModalConfirm" class="btn btn-warning btn-md">Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Client JavaScript Files -->
+  <script src="/js/sound-fx.js"></script>
+  <script src="/js/socket-client.js"></script>
+  <script src="/js/games/codenames.js"></script>
+  <script src="/js/games/spy.js"></script>
+  <script src="/js/hub.js"></script>
+</body>
+</html>

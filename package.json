@@ -1,0 +1,30 @@
+{
+  "name": "party-games-hub",
+  "version": "1.0.0",
+  "description": "Local-first multi-device Party Games Hub featuring Codenames and Spy (Spyfall)",
+  "main": "server/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "node --watch server/server.js"
+  },
+  "keywords": [
+    "party-games",
+    "codenames",
+    "spyfall",
+    "websocket",
+    "local-network",
+    "pwa"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.19.2",
+    "qrcode": "^1.5.3",
+    "socket.io": "^4.7.5"
+  },
+  "devDependencies": {
+    "puppeteer": "^25.5.0",
+    "socket.io-client": "^4.8.3"
+  }
+}
