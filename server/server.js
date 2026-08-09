@@ -29,11 +29,25 @@ const roomManager = new RoomManager(io);
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
+// Dynamic Base URL Resolver (supports Localhost, local Wi-Fi IP, and Cloud hosting like Render)
+function getBaseUrl(req) {
+  if (process.env.PUBLIC_URL) {
+    return process.env.PUBLIC_URL.replace(/\/$/, '');
+  }
+  if (req && req.headers && req.headers.host) {
+    const host = req.headers.host;
+    const proto = req.headers['x-forwarded-proto'] || (req.socket && req.socket.encrypted ? 'https' : 'http');
+    return `${proto}://${host}`;
+  }
+  const primaryIP = NetworkDetector.getPrimaryIP();
+  return `http://${primaryIP}:${PORT}`;
+}
+
 // Network IP & Info Endpoint
 app.get('/api/info', async (req, res) => {
   const primaryIP = NetworkDetector.getPrimaryIP();
   const allIPs = NetworkDetector.getLocalIPs();
-  const hostUrl = `http://${primaryIP}:${PORT}`;
+  const hostUrl = getBaseUrl(req);
 
   let qrCodeDataUrl = '';
   try {
@@ -54,11 +68,13 @@ app.get('/api/info', async (req, res) => {
 
 // QR Code Generator for specific Room URLs
 app.get('/api/qrcode', async (req, res) => {
-  const url = req.query.url;
-  if (!url) return res.status(400).json({ error: 'URL query parameter required' });
+  let targetUrl = req.query.url;
+  if (!targetUrl) {
+    targetUrl = getBaseUrl(req);
+  }
 
   try {
-    const qrDataUrl = await QRCode.toDataURL(url);
+    const qrDataUrl = await QRCode.toDataURL(targetUrl);
     res.json({ qrDataUrl });
   } catch (err) {
     res.status(500).json({ error: 'Failed to generate QR code' });
@@ -90,8 +106,10 @@ io.on('connection', (socket) => {
   // Create Room
   socket.on('create_room', (data, callback) => {
     const room = roomManager.createRoom(socket, data.playerName, data.avatar);
-    const primaryIP = NetworkDetector.getPrimaryIP();
-    const joinUrl = `http://${primaryIP}:${PORT}/join/${room.code}`;
+    const hostHeader = socket.handshake.headers.host;
+    const protoHeader = socket.handshake.headers['x-forwarded-proto'] || 'http';
+    const baseUrl = process.env.PUBLIC_URL || (hostHeader ? `${protoHeader}://${hostHeader}` : `http://${NetworkDetector.getPrimaryIP()}:${PORT}`);
+    const joinUrl = `${baseUrl}/join/${room.code}`;
 
     QRCode.toDataURL(joinUrl)
       .then(qrCode => {

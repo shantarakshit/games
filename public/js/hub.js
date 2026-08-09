@@ -693,9 +693,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Share & QR Modal Handlers
   function getJoinUrl() {
-    const host = serverInfo ? serverInfo.primaryIP : window.location.hostname;
-    const port = serverInfo ? serverInfo.port : window.location.port;
-    return `http://${host}:${port}/`;
+    // Priority: room join URL if in a active room, else window.location.origin
+    if (ClientState.roomCode) {
+      return `${window.location.origin}/join/${ClientState.roomCode}`;
+    }
+    return window.location.origin + '/';
   }
 
   function openShareModal() {
