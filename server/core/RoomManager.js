@@ -187,6 +187,33 @@ class RoomManager {
   }
 
   /**
+   * Reset the server: disconnect all sockets, clear all rooms.
+   * The next player to join will become host of a fresh room.
+   */
+  resetAll() {
+    const roomCount = this.rooms.size;
+    let socketCount = 0;
+
+    for (const [code, room] of this.rooms.entries()) {
+      for (const socketId of room.players.keys()) {
+        const sock = this.io.sockets.sockets.get(socketId);
+        if (sock) {
+          sock.emit('server_reset', { message: 'The server has been reset by the administrator. Please refresh to rejoin.' });
+          sock.disconnect(true);
+          socketCount++;
+        }
+      }
+      if (room.gameInstance && typeof room.gameInstance.destroy === 'function') {
+        room.gameInstance.destroy();
+      }
+    }
+
+    this.rooms.clear();
+    console.log(`🔄 Server Reset: Cleared ${roomCount} room(s) and disconnected ${socketCount} socket(s).`);
+    return { roomCount, socketCount };
+  }
+
+  /**
    * Leave or disconnect from room.
    */
   handleDisconnect(socket) {
@@ -233,6 +260,7 @@ class RoomManager {
     if (player) {
       if (action === 'set_team' && data.team) {
         player.team = data.team;
+        player.role = 'operative';
         this.broadcastRoomUpdate(code);
       }
       if (action === 'claim_spymaster') {
@@ -335,6 +363,15 @@ class RoomManager {
 
     const gamePlugin = GameRegistry.getGame(room.gameId);
     if (!gamePlugin) return;
+
+    // Minimum player count enforcement (allow 1-player test mode)
+    if (room.players.size > 1 && room.players.size < (gamePlugin.minPlayers || 1)) {
+      this.io.to(code).emit('system_message', {
+        type: 'warning',
+        text: `⚠️ ${gamePlugin.name} requires at least ${gamePlugin.minPlayers} players to start (or 1 player for solo test mode)!`
+      });
+      return { success: false, message: `${gamePlugin.name} requires at least ${gamePlugin.minPlayers} players to start!` };
+    }
 
     room.gameState = 'playing';
     room.gameInstance = gamePlugin.createInstance(room, (event, data) => {

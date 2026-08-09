@@ -5,11 +5,18 @@ class SpyInstance {
   constructor(room, emitEvent) {
     this.room = room;
     this.emitEvent = emitEvent;
+    const spySettings = room.settings.spy || {};
+    const isCoverTyping = spySettings.coverTyping !== undefined
+      ? (spySettings.coverTyping === true || spySettings.coverTyping === 'true')
+      : true;
+
     this.settings = Object.assign({
       spiesCount: 1,
       spyKnowledgeMode: 'category', // 'category' | 'blind' | 'hints'
-      timer: 300
-    }, room.settings.spy || {});
+      timer: 300,
+      coverTyping: isCoverTyping
+    }, spySettings);
+    this.settings.coverTyping = isCoverTyping;
 
     // Load categories database
     const catPath = path.join(__dirname, 'data/categories.json');
@@ -142,7 +149,7 @@ class SpyInstance {
   startTallyPhase() {
     this.stopTimer();
     this.phase = 'tally';
-    this.timerSeconds = 10; // 10 seconds tally screen
+    this.timerSeconds = 10;
 
     // Calculate Votes for living non-eliminated players
     const livingPlayers = Array.from(this.room.players.keys()).filter(id => !this.eliminatedPlayers.has(id));
@@ -155,7 +162,39 @@ class SpyInstance {
       }
     }
 
-    // Find max votes
+    // Check unanimous "No Imposters Left" vote (all living players)
+    const noImpVotes = Array.from(this.votes.values()).filter(v => v === 'NO_IMPOSTERS').length;
+    if (noImpVotes >= livingPlayers.length && livingPlayers.length > 0) {
+      // Game ends — check if all imposters have been voted out
+      const livingSpies = this.spies.filter(id => !this.eliminatedPlayers.has(id));
+      if (livingSpies.length === 0) {
+        this.winner = 'innocents';
+        this.winReason = 'no-imposters-declared';
+        this.tallyResultText = `✅ All imposters eliminated! Innocents win!`;
+      } else {
+        this.winner = 'impostors';
+        this.winReason = 'no-imposters-wrong-call';
+        this.tallyResultText = `🕵️ Wrong call! ${livingSpies.length} Impostor(s) still alive! Impostors win!`;
+      }
+      // Always reveal all roles when game ends via No Imposters Left
+      this.tallyData = Array.from(this.room.players.keys()).map(id => {
+        const p = this.room.players.get(id);
+        return {
+          id,
+          name: p ? p.name : 'Player',
+          avatar: p ? p.avatar : '😎',
+          votesReceived: voteCounts.get(id) || 0,
+          isSpy: this.spies.includes(id),
+          isEliminated: this.eliminatedPlayers.has(id)
+        };
+      });
+      this.log.push({ type: 'vote', text: `📊 ${this.tallyResultText}` });
+      this.startTimer();
+      this.emitEvent('game_state_updated');
+      return;
+    }
+
+    // Find max votes (for player elimination)
     let maxVotes = 0;
     let accusedId = null;
     let isTie = false;
@@ -177,43 +216,27 @@ class SpyInstance {
 
       if (isSpy) {
         this.spies = this.spies.filter(id => id !== accusedId);
-        if (this.spies.length === 0) {
-          this.winner = 'innocents';
-          this.winReason = 'all-spies-eliminated';
-          this.tallyResultText = `💥 ${accusedPlayer ? accusedPlayer.name : 'Someone'} was voted out! They WERE the last Impostor! Game Over!`;
-        } else {
-          const remainingLiving = livingPlayers.filter(id => id !== accusedId);
-          const livingSpies = this.spies.filter(id => !this.eliminatedPlayers.has(id));
-          const livingInnocents = remainingLiving.length - livingSpies.length;
+      }
 
-          if (livingSpies.length >= livingInnocents) {
-            this.winner = 'impostors';
-            this.winReason = 'impostors-majority';
-            this.tallyResultText = `🕵️ ${accusedPlayer ? accusedPlayer.name : 'Someone'} was voted out! Impostors have reached majority! Game Over!`;
-          } else {
-            // Voted out an impostor, but NOT the last impostor! Role is not revealed.
-            this.tallyResultText = `👤 ${accusedPlayer ? accusedPlayer.name : 'Someone'} was voted out!`;
-          }
-        }
+      // Check impostor majority AFTER elimination (but never reveal spy status yet)
+      const remainingLiving = livingPlayers.filter(id => id !== accusedId);
+      const livingSpies = this.spies.filter(id => !this.eliminatedPlayers.has(id));
+      const livingInnocents = remainingLiving.length - livingSpies.length;
+
+      if (livingSpies.length >= livingInnocents && livingSpies.length > 0) {
+        // Impostors have reached majority — game over, NOW reveal all roles
+        this.winner = 'impostors';
+        this.winReason = 'impostors-majority';
+        this.tallyResultText = `🕵️ ${accusedPlayer ? accusedPlayer.name : 'Someone'} was voted out! Impostors have reached majority! Game Over!`;
       } else {
-        const remainingLiving = livingPlayers.filter(id => id !== accusedId);
-        const livingSpies = this.spies.filter(id => !this.eliminatedPlayers.has(id));
-        const livingInnocents = remainingLiving.length - livingSpies.length;
-
-        if (livingSpies.length >= livingInnocents) {
-          this.winner = 'impostors';
-          this.winReason = 'impostors-majority';
-          this.tallyResultText = `🕵️ ${accusedPlayer ? accusedPlayer.name : 'Someone'} was voted out! Impostors have reached majority! Game Over!`;
-        } else {
-          // Innocent voted out! Role is not revealed.
-          this.tallyResultText = `👤 ${accusedPlayer ? accusedPlayer.name : 'Someone'} was voted out!`;
-        }
+        // NEVER reveal if accused was a spy — just say they were voted out
+        this.tallyResultText = `👤 ${accusedPlayer ? accusedPlayer.name : 'Someone'} was voted out!`;
       }
     } else {
       this.tallyResultText = '⚖️ It was a tie! No one was eliminated.';
     }
 
-    // Prepare Tally Data (only include isSpy flag if game is over)
+    // NEVER show isSpy in tally unless the game is over via impostors-majority
     this.tallyData = livingPlayers.map(id => {
       const p = this.room.players.get(id);
       return {
@@ -221,7 +244,7 @@ class SpyInstance {
         name: p ? p.name : 'Player',
         avatar: p ? p.avatar : '😎',
         votesReceived: voteCounts.get(id) || 0,
-        isSpy: this.winner ? this.spies.includes(id) : undefined
+        isSpy: this.winner ? this.spies.includes(id) || (accusedId === id && this.playerRoles.get(id)?.isSpy) : undefined
       };
     });
 
@@ -247,7 +270,11 @@ class SpyInstance {
   onTimerExpired() {
     this.stopTimer();
     if (this.phase === 'discussion') {
-      this.startTypingGuessPhase();
+      if (!this.settings.coverTyping || this.settings.coverTyping === 'false') {
+        this.startVotingPhase();
+      } else {
+        this.startTypingGuessPhase();
+      }
     } else if (this.phase === 'typing_guess') {
       const uncompletedSockets = [];
       for (const socketId of this.room.players.keys()) {
@@ -295,23 +322,42 @@ class SpyInstance {
         break;
 
       case 'submit_vote':
-        if (this.phase === 'voting' && !this.eliminatedPlayers.has(socketId) && data.targetId) {
-          if (!this.eliminatedPlayers.has(data.targetId)) {
-            this.votes.set(socketId, data.targetId);
-            const targetPlayer = room.players.get(data.targetId);
-            this.log.push({ type: 'vote', text: `👤 ${player.name} submitted their vote.` });
+        if (this.phase === 'voting' && !this.eliminatedPlayers.has(socketId)) {
+          const livingPlayers = Array.from(room.players.keys()).filter(id => !this.eliminatedPlayers.has(id));
 
-            // Check if all living connected players have voted
-            const livingPlayers = Array.from(room.players.keys()).filter(id => !this.eliminatedPlayers.has(id));
-            if (this.votes.size >= livingPlayers.length) {
-              this.startTallyPhase();
+          if (data.targetId === 'NO_IMPOSTERS') {
+            // Only allow once enough players have been eliminated to make 0 imposters mathematically possible
+            const eligibleForNoImp = this.eliminatedPlayers.size >= (this.settings.spiesCount || 1);
+            if (eligibleForNoImp) {
+              this.votes.set(socketId, 'NO_IMPOSTERS');
+              this.log.push({ type: 'vote', text: `👤 ${player.name} voted — No Imposters Left!` });
             }
+          } else if (data.targetId && !this.eliminatedPlayers.has(data.targetId)) {
+            this.votes.set(socketId, data.targetId);
+            this.log.push({ type: 'vote', text: `👤 ${player.name} submitted their vote.` });
+          }
+
+          // Start tally when everyone has voted
+          if (this.votes.size >= livingPlayers.length) {
+            this.startTallyPhase();
           }
         }
         break;
 
       case 'spy_guess_location':
         this.spyGuessLocation(socketId, data.location);
+        break;
+
+      case 'adjust_timer':
+        // Host-only: add 30 seconds, or set timer to 1 second
+        if (player.isHost && (this.phase === 'discussion' || this.phase === 'voting')) {
+          if (data.delta) {
+            this.timerSeconds = Math.max(1, this.timerSeconds + data.delta);
+          } else if (data.set !== undefined) {
+            this.timerSeconds = Math.max(1, data.set);
+          }
+          this.emitEvent('timer_tick', { timerSeconds: this.timerSeconds, phase: this.phase });
+        }
         break;
 
       case 'restart_game':
@@ -447,6 +493,8 @@ class SpyInstance {
       isSpy,
       isEliminated,
       hasVoted: this.votes.has(socketId),
+      myVote: this.votes.get(socketId) || null,
+      noImpVoteCount: Array.from(this.votes.values()).filter(v => v === 'NO_IMPOSTERS').length,
       hasGuessed: this.usedSpyGuess.has(socketId),
       camouflageWord: !isSpy ? this.camouflageWords.get(socketId) : null,
       camouflageCompleted: !isSpy ? this.completedCamouflage.has(socketId) : false,
@@ -458,6 +506,18 @@ class SpyInstance {
       livingPlayers,
       votesCount: this.votes.size,
       totalLivingPlayers: livingPlayers.length,
+      eliminatedCount: this.eliminatedPlayers.size,
+      eliminatedSpiesCount: Array.from(this.eliminatedPlayers).filter(id => {
+        const roleInfo = this.playerRoles.get(id);
+        return roleInfo && roleInfo.isSpy;
+      }).length,
+      totalSpiesCount: this.settings.spiesCount || 1,
+      players: Array.from(room.players.values()).map(p => ({
+        id: p.id,
+        name: p.name,
+        avatar: p.avatar,
+        isAlive: !this.eliminatedPlayers.has(p.id)
+      })),
       winner: this.winner,
       winReason: this.winReason,
       log: this.log,
@@ -484,7 +544,7 @@ class SpyPlugin {
     this.name = 'The Imposter Game';
     this.description = 'Find the hidden imposter among your party guests before time runs out!';
     this.icon = '🕵️';
-    this.minPlayers = 1;
+    this.minPlayers = 3;
     this.maxPlayers = 16;
     this.category = 'Bluffing / Party Game';
     this.settingsSchema = [
@@ -522,6 +582,17 @@ class SpyPlugin {
         ],
         default: 120,
         description: 'Timer duration for asking questions before mandatory 1-minute voting.'
+      },
+      {
+        id: 'coverTyping',
+        label: 'Cover-Typing Phase',
+        type: 'select',
+        options: [
+          { value: true, label: 'Enabled (20s typing before voting)' },
+          { value: false, label: 'Disabled (skip to voting directly)' }
+        ],
+        default: true,
+        description: 'When enabled, everyone types a word before voting to disguise who is the Impostor.'
       }
     ];
   }

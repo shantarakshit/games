@@ -115,6 +115,27 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       if (roomBadge) roomBadge.classList.add('hidden');
     }
+
+    // Always keep the player hostname badge visible after login
+    updateHeaderUserBadge();
+    updateHeaderHostBadge(ClientState.currentRoom);
+  }
+
+  // Update Header Host Pill Badge (shows current Host next to Wi-Fi pill)
+  function updateHeaderHostBadge(room) {
+    const hostBadge = document.getElementById('headerHostBadge');
+    const hostNameEl = document.getElementById('headerHostName');
+    if (!hostBadge || !hostNameEl) return;
+
+    if (room && room.players && room.players.length > 0) {
+      const hostPlayer = room.players.find(p => p.isHost);
+      if (hostPlayer) {
+        hostNameEl.innerText = hostPlayer.name;
+        hostBadge.classList.remove('hidden');
+        return;
+      }
+    }
+    hostBadge.classList.add('hidden');
   }
 
   // Update Header User Badge
@@ -141,11 +162,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (ClientState.playerName) updateHeaderUserBadge();
 
-  // Allow clicking header user badge to reset/edit nickname
+  // Allow clicking header user badge to logout
   const userBadgeEl = document.getElementById('headerUserBadge');
   if (userBadgeEl) {
     userBadgeEl.style.cursor = 'pointer';
-    userBadgeEl.title = 'Tap to reset/change nickname';
+    userBadgeEl.title = 'Tap to logout';
     userBadgeEl.onclick = () => {
       SoundFX.playClick();
       window.location.reload();
@@ -208,6 +229,22 @@ document.addEventListener('DOMContentLoaded', () => {
     showView('viewHome');
     if (typeof window.showCustomConfirm === 'function') {
       window.showCustomConfirm('Removed from Lobby', data.message || 'You were removed from the lobby by the Host.');
+    }
+  });
+
+  // Socket Listener: Server Reset
+  socket.on('server_reset', (data) => {
+    ClientState.roomCode = null;
+    showView('viewHome');
+    if (typeof window.showCustomConfirm === 'function') {
+      window.showCustomConfirm('Server Reset', data.message || 'The server has been reset. Please rejoin.');
+    }
+  });
+
+  // Socket Listener: System Warning / Notice Message
+  socket.on('system_message', (data) => {
+    if (typeof window.showCustomConfirm === 'function') {
+      window.showCustomConfirm('Notice', data.text || 'System message received.');
     }
   });
 
@@ -279,6 +316,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Update Lobby UI
   function updateLobbyUI(room) {
     if (playerCount) playerCount.innerText = room.players.length;
+    updateHeaderHostBadge(room);
 
     // Update Nickname Banner
     const lobbyNicknameAvatar = document.getElementById('lobbyNicknameAvatar');
@@ -461,16 +499,57 @@ document.addEventListener('DOMContentLoaded', () => {
           reqBadge.className = bothClaimed ? 'requirement-badge ready-badge' : 'requirement-badge warning-badge';
         }
 
-        // Disable Start Game button until both Spymasters are claimed (allow 1-player test mode)
-        const canStart = bothClaimed || room.players.length === 1;
+        // Check min players requirement & spymaster requirement
+        const lobbyStartWarning = document.getElementById('lobbyStartWarning');
+        const selectedGame = (serverInfo && serverInfo.games) ? serverInfo.games.find(g => g.id === room.gameId) : null;
+        const minReq = selectedGame ? (selectedGame.minPlayers || 4) : 4;
+        const hasMinPlayers = room.players.length >= minReq || room.players.length === 1;
+        const canStart = (bothClaimed || room.players.length === 1) && hasMinPlayers;
+
+        let warningMsg = '';
+        if (!hasMinPlayers) {
+          warningMsg = `⚠️ Codenames requires at least ${minReq} players to start (currently ${room.players.length} in room).`;
+        } else if (!bothClaimed && room.players.length > 1) {
+          warningMsg = `⚠️ Claim both RED Spymaster and BLUE Spymaster positions to start!`;
+        }
+
+        if (lobbyStartWarning) {
+          if (warningMsg) {
+            lobbyStartWarning.innerText = warningMsg;
+            lobbyStartWarning.classList.remove('hidden');
+          } else {
+            lobbyStartWarning.classList.add('hidden');
+          }
+        }
+
         if (ClientState.isHost && btnStartGame) {
           btnStartGame.disabled = !canStart;
-          btnStartGame.title = canStart ? 'Start Game' : 'Both Spymasters must be claimed first!';
+          btnStartGame.title = canStart ? 'Start Game' : warningMsg;
         }
       } else {
         lobbyTeamRoster.classList.add('hidden');
+        const lobbyStartWarning = document.getElementById('lobbyStartWarning');
+        const selectedGame = (serverInfo && serverInfo.games) ? serverInfo.games.find(g => g.id === room.gameId) : null;
+        const minReq = selectedGame ? (selectedGame.minPlayers || 3) : 3;
+        const hasMinPlayers = room.players.length >= minReq || room.players.length === 1;
+
+        let warningMsg = '';
+        if (!hasMinPlayers && room.gameId === 'spy') {
+          warningMsg = `⚠️ The Imposter Game requires at least ${minReq} players to start (currently ${room.players.length} in room).`;
+        }
+
+        if (lobbyStartWarning) {
+          if (warningMsg) {
+            lobbyStartWarning.innerText = warningMsg;
+            lobbyStartWarning.classList.remove('hidden');
+          } else {
+            lobbyStartWarning.classList.add('hidden');
+          }
+        }
+
         if (ClientState.isHost && btnStartGame) {
-          btnStartGame.disabled = false;
+          btnStartGame.disabled = !hasMinPlayers;
+          btnStartGame.title = hasMinPlayers ? 'Start Game' : warningMsg;
         }
       }
     }
@@ -480,8 +559,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (lobbyGamesList) {
       lobbyGamesList.innerHTML = '';
       const availableGames = (serverInfo && serverInfo.games && serverInfo.games.length > 0) ? serverInfo.games : [
-        { id: 'codenames', name: 'Codenames', icon: '🕵️‍♂️', description: 'Give 1-word clues to reveal your secret agent team cards while avoiding the deadly assassin!' },
-        { id: 'spy', name: 'The Imposter Game', icon: '🕵️‍♀️', description: 'Find the hidden imposter among your party guests before time runs out!' }
+        { id: 'codenames', name: 'Codenames', icon: '🕵️‍♂️', description: 'Give 1-word clues to reveal your secret agent team cards while avoiding the deadly assassin!', minPlayers: 4, maxPlayers: 16 },
+        { id: 'spy', name: 'The Imposter Game', icon: '🕵️‍♀️', description: 'Find the hidden imposter among your party guests before time runs out!', minPlayers: 3, maxPlayers: 16 }
       ];
 
       availableGames.forEach(game => {
@@ -580,7 +659,9 @@ document.addEventListener('DOMContentLoaded', () => {
         selects.forEach(select => {
           const id = select.dataset.settingId;
           let val = select.value;
-          if (!isNaN(val) && val !== '') val = Number(val);
+          if (val === 'true') val = true;
+          else if (val === 'false') val = false;
+          else if (!isNaN(val) && val !== '') val = Number(val);
           newSettings[id] = val;
         });
       }
@@ -622,10 +703,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const url = getJoinUrl();
     if (modalUrlInput) modalUrlInput.value = url;
 
-    // Update Messenger share link
+    // Update Messenger share button — copy link then open Messenger app directly
     if (btnMessengerShare) {
-      const messengerUrl = `https://www.facebook.com/dialog/send?link=${encodeURIComponent(url)}&redirect_uri=${encodeURIComponent(url)}&app_id=966242223397198`;
-      btnMessengerShare.href = messengerUrl;
+      btnMessengerShare.onclick = async (e) => {
+        e.preventDefault();
+        // Copy the link to clipboard first
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(url);
+          }
+        } catch (_) {}
+        // Open Messenger app via deep link (mobile) — fb-messenger:// opens the app
+        // Falls back to the web Messenger on desktop
+        const messengerDeepLink = `fb-messenger://share?link=${encodeURIComponent(url)}`;
+        window.location.href = messengerDeepLink;
+        // Fallback: open web Messenger after a short delay if the app didn't open
+        setTimeout(() => {
+          window.open(`https://m.me/?link=${encodeURIComponent(url)}`, '_blank');
+        }, 1200);
+      };
     }
 
     fetch(`/api/qrcode?url=${encodeURIComponent(url)}`)

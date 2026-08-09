@@ -51,11 +51,9 @@ class CodenamesInstance {
     for (const player of this.room.players.values()) {
       if (player.team === 'red' && player.role === 'spymaster') {
         this.redSpymasterId = player.id;
-        this.redSpymasterClaimed = true;
       }
       if (player.team === 'blue' && player.role === 'spymaster') {
         this.blueSpymasterId = player.id;
-        this.blueSpymasterClaimed = true;
       }
     }
 
@@ -431,7 +429,7 @@ class CodenamesPlugin {
     this.name = 'Codenames';
     this.description = 'Team word-guessing game. Spymasters give 1-word clues to guide their field operatives to their secret agent cards!';
     this.icon = '🕵️‍♂️';
-    this.minPlayers = 1;
+    this.minPlayers = 4;
     this.maxPlayers = 16;
     this.category = 'Word / Team Game';
     this.settingsSchema = [

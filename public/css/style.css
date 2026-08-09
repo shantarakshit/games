@@ -312,18 +312,24 @@ body {
   box-shadow: 0 6px 18px rgba(0, 132, 255, 0.5);
 }
 
-/* Lobby Controls — row layout */
+/* Lobby Controls */
 .lobby-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+.lobby-buttons-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-wrap: wrap;
+  width: 100%;
 }
-.lobby-controls #btnStartGame {
+.lobby-buttons-row #btnStartGame {
   flex: 1;
   min-width: 0;
 }
-.lobby-controls #btnLeaveRoom {
+.lobby-buttons-row #btnLeaveRoom {
   flex-shrink: 0;
   white-space: nowrap;
 }
@@ -1149,6 +1155,23 @@ body {
   border: 1px solid rgba(16, 185, 129, 0.4);
 }
 
+.lobby-start-warning {
+  margin-bottom: 12px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
 /* ================= SPY SECRET PEEK CARD ================= */
 .secret-card-container {
   perspective: 1000px;
@@ -1443,3 +1466,147 @@ body {
   margin-top: 2px;
 }
 
+
+/* ================= BIGGER TIMER — BOTH GAMES ================= */
+#spyTimerDisplay {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+#spyTimerText {
+  font-size: 2.2rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: #f0fdf4;
+  text-shadow: 0 0 12px rgba(74, 222, 128, 0.5);
+  letter-spacing: 2px;
+}
+
+/* Codenames timer — bigger */
+#cnTimerContainer.cn-timer-badge {
+  font-size: 1.4rem !important;
+  font-weight: 900 !important;
+  padding: 4px 14px !important;
+}
+
+/* ================= HOST TIMER CONTROLS ================= */
+.host-timer-controls {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-right: 6px;
+}
+
+/* ================= NO IMPOSTERS VOTE CARD ================= */
+.vote-card.no-imp-card {
+  border: 2px solid rgba(34, 197, 94, 0.5);
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  color: #fff;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.btn-success:hover { opacity: 0.85; }
+
+/* ================= ROSTER — ELIMINATED CHIP ================= */
+.roster-player-chip.eliminated {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+.eliminated-tag { font-size: 0.7rem; }
+
+/* ================= NO IMPOSTERS LEFT — SELECTED STATE ================= */
+.vote-card.no-imp-card.my-vote-selected {
+  border-color: rgba(34, 197, 94, 0.8);
+  background: rgba(34, 197, 94, 0.18);
+}
+
+.vote-req-hint {
+  font-size: 0.68rem;
+  color: rgba(255,255,255,0.55);
+  font-weight: 500;
+}
+
+/* ================= LOGOUT HINT IN HEADER BADGE ================= */
+.logout-hint {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: rgba(165, 180, 252, 0.55);
+  margin-left: 2px;
+  white-space: nowrap;
+}
+
+.header-user-badge:hover .logout-hint {
+  color: #f87171;
+}
+
+/* ================= SPECTATOR MODE DURING VOTING ================= */
+.spectator-badge {
+  display: inline-block;
+  background: rgba(250, 204, 21, 0.18);
+  color: #fbbf24;
+  border: 1px solid rgba(250, 204, 21, 0.35);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  margin-right: 6px;
+}
+
+.spectator-waiting-msg {
+  text-align: center;
+  padding: 20px;
+  color: rgba(255,255,255,0.4);
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+/* ================= HOST PILL BADGE IN TOP HEADER ================= */
+.host-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: #fbbf24;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
+}
+
+/* ================= HOST TIMER & GAME HEADER CONTROLS ================= */
+.game-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.host-timer-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: 4px;
+}
+
+.game-header-actions .btn {
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border-radius: 10px;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}

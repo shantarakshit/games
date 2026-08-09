@@ -6,8 +6,8 @@ const SpyUI = {
 
     // Timer Bell Audio on Phase Transitions
     if (this.lastPhase && this.lastPhase !== state.phase) {
-      if ((this.lastPhase === 'discussion' && state.phase === 'voting') ||
-          (this.lastPhase === 'voting' && state.phase === 'tally')) {
+      const bellPhases = ['discussion', 'typing_guess', 'voting'];
+      if (bellPhases.includes(this.lastPhase) && state.phase !== 'ended') {
         SoundFX.playTimerBell();
       }
     }
@@ -128,38 +128,75 @@ const SpyUI = {
     const votingStatus = document.getElementById('spyVotingStatus');
 
     if (votingContainer) {
-      if (state.phase === 'voting' && !state.isEliminated && !state.winner) {
+      if (state.phase === 'voting' && !state.winner) {
         votingContainer.classList.remove('hidden');
 
-        if (votingStatus) {
-          votingStatus.innerText = state.hasVoted 
-            ? '✔️ You have submitted your vote! Waiting for others...' 
-            : 'Select a player below to cast your 1 vote:';
-        }
+        if (state.isEliminated) {
+          // Spectator mode — show progress but no vote controls
+          if (votingStatus) {
+            votingStatus.innerHTML = `<span class="spectator-badge">\ud83d\udc41\ufe0f SPECTATING</span> Voting in progress \u2014 ${state.votesCount || 0} of ${state.totalLivingPlayers || 0} votes cast`;
+          }
+          if (votingGrid) {
+            votingGrid.innerHTML = `<div class="spectator-waiting-msg">\u23f3 Waiting for living players to finish voting...</div>`;
+          }
+        } else {
+          if (votingStatus) {
+            votingStatus.innerText = state.hasVoted
+              ? '\u2714\ufe0f You have submitted your vote! Waiting for others...'
+              : 'Select a player below to cast your 1 vote:';
+          }
 
-        if (votingGrid && state.livingPlayers) {
-          votingGrid.innerHTML = '';
-          state.livingPlayers.forEach(p => {
-            if (p.id === ClientState.myPlayerId) return; // Cannot vote for self
+          if (votingGrid && state.livingPlayers) {
+            votingGrid.innerHTML = '';
 
-            const voteCard = document.createElement('div');
-            voteCard.className = 'vote-card';
-            voteCard.innerHTML = `
-              <span class="player-avatar">${p.avatar}</span>
-              <span class="player-name">${p.name}</span>
-              <button class="btn ${state.hasVoted ? 'btn-secondary' : 'btn-danger'} btn-xs" ${state.hasVoted ? 'disabled' : ''}>
-                ${state.hasVoted ? 'Voted' : '🗳️ Vote'}
-              </button>
-            `;
-
-            if (!state.hasVoted) {
-              voteCard.querySelector('button').onclick = () => {
-                SoundFX.playChime();
-                socket.emit('game_action', { action: 'submit_vote', targetId: p.id });
-              };
+            // "No Imposters Left" button — available once eliminatedCount >= totalSpies
+            const eliminatedCount = state.eliminatedCount || 0;
+            const totalSpies = state.totalSpiesCount || 1;
+            const eligibleForNoImp = eliminatedCount >= totalSpies;
+            if (eligibleForNoImp) {
+              const myVoteIsNoImp = state.myVote === 'NO_IMPOSTERS';
+              const noImpVoteCount = state.noImpVoteCount || 0;
+              const totalLiving = state.totalLivingPlayers || 1;
+              const noImpCard = document.createElement('div');
+              noImpCard.className = `vote-card no-imp-card${myVoteIsNoImp ? ' my-vote-selected' : ''}`;
+              noImpCard.innerHTML = `
+                <span class="player-avatar">\ud83c\udff3\ufe0f</span>
+                <span class="player-name">No Imposters Left<br><small class="vote-req-hint">Requires unanimous vote \xb7 ${noImpVoteCount}/${totalLiving}</small></span>
+                <button class="btn ${myVoteIsNoImp ? 'btn-secondary' : 'btn-success'} btn-xs" ${myVoteIsNoImp ? 'disabled' : ''} id="btnVoteNoImpostors">
+                  ${myVoteIsNoImp ? '\u2705 Voted' : '\ud83c\udff3\ufe0f End Game'}
+                </button>
+              `;
+              if (!myVoteIsNoImp) {
+                noImpCard.querySelector('button').onclick = () => {
+                  SoundFX.playChime();
+                  socket.emit('game_action', { action: 'submit_vote', targetId: 'NO_IMPOSTERS' });
+                };
+              }
+              votingGrid.appendChild(noImpCard);
             }
-            votingGrid.appendChild(voteCard);
-          });
+
+            state.livingPlayers.forEach(p => {
+              if (p.id === ClientState.myPlayerId) return; // Cannot vote for self
+
+              const voteCard = document.createElement('div');
+              voteCard.className = 'vote-card';
+              voteCard.innerHTML = `
+                <span class="player-avatar">${p.avatar}</span>
+                <span class="player-name">${p.name}</span>
+                <button class="btn ${state.hasVoted ? 'btn-secondary' : 'btn-danger'} btn-xs" ${state.hasVoted ? 'disabled' : ''}>
+                  ${state.hasVoted ? 'Voted' : '\ud83d\uddf3\ufe0f Vote'}
+                </button>
+              `;
+
+              if (!state.hasVoted) {
+                voteCard.querySelector('button').onclick = () => {
+                  SoundFX.playChime();
+                  socket.emit('game_action', { action: 'submit_vote', targetId: p.id });
+                };
+              }
+              votingGrid.appendChild(voteCard);
+            });
+          }
         }
       } else {
         votingContainer.classList.add('hidden');
@@ -213,9 +250,18 @@ const SpyUI = {
 
     // Render Bottom Party Players Roster
     const rosterListEl = document.getElementById('spyPlayersRosterList');
-    if (rosterListEl) {
-      const players = ClientState.room ? Array.from(ClientState.room.players.values()) : [];
-      rosterListEl.innerHTML = players.map(p => `<div class="roster-player-chip">${p.avatar || '😎'} ${p.name}</div>`).join('');
+    if (rosterListEl && state.players) {
+      rosterListEl.innerHTML = state.players.map(p => {
+        const deadTag = p.isAlive ? '' : ' <span class="eliminated-tag">❌</span>';
+        return `<div class="roster-player-chip${p.isAlive ? '' : ' eliminated'}">${p.avatar || '😎'} ${p.name}${deadTag}</div>`;
+      }).join('');
+    }
+
+    // Host Timer Controls (discussion or voting phase only)
+    const timerControls = document.getElementById('spyHostTimerControls');
+    if (timerControls) {
+      const showControls = ClientState.isHost && (state.phase === 'discussion' || state.phase === 'voting') && !state.winner;
+      timerControls.classList.toggle('hidden', !showControls);
     }
   },
 
@@ -246,37 +292,65 @@ const SpyUI = {
     }
 
     // Cover-Typing Phase Input Listeners
+    const formImposterGuess = document.getElementById('spyImposterGuessForm');
     const btnSubmitPhaseGuess = document.getElementById('btnSubmitSpyPhaseGuess');
     const inputPhaseGuess = document.getElementById('inputSpyPhaseGuess');
-    const submitPhaseGuessAction = () => {
-      SoundFX.playClick();
+
+    const submitPhaseGuessAction = (e) => {
+      if (e) e.preventDefault();
       const val = inputPhaseGuess ? inputPhaseGuess.value.trim() : '';
       if (val) {
+        SoundFX.playClick();
         socket.emit('game_action', { action: 'spy_guess_location', location: val });
         if (inputPhaseGuess) inputPhaseGuess.value = '';
       }
     };
+
+    if (formImposterGuess) formImposterGuess.addEventListener('submit', submitPhaseGuessAction);
     if (btnSubmitPhaseGuess) btnSubmitPhaseGuess.onclick = submitPhaseGuessAction;
     if (inputPhaseGuess) {
       inputPhaseGuess.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') { e.preventDefault(); submitPhaseGuessAction(); }
+        if (e.key === 'Enter' || e.keyCode === 13) {
+          e.preventDefault();
+          submitPhaseGuessAction(e);
+        }
+      });
+      inputPhaseGuess.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter' || e.keyCode === 13) {
+          e.preventDefault();
+          submitPhaseGuessAction(e);
+        }
       });
     }
 
+    const formInnocentCamouflage = document.getElementById('spyInnocentCamouflageForm');
     const btnSubmitCamouflage = document.getElementById('btnSubmitCamouflage');
     const inputCamouflage = document.getElementById('inputSpyCamouflage');
-    const submitCamouflageAction = () => {
-      SoundFX.playClick();
+
+    const submitCamouflageAction = (e) => {
+      if (e) e.preventDefault();
       const val = inputCamouflage ? inputCamouflage.value.trim() : '';
       if (val) {
+        SoundFX.playClick();
         socket.emit('game_action', { action: 'submit_camouflage_typing', word: val });
         if (inputCamouflage) inputCamouflage.value = '';
       }
     };
+
+    if (formInnocentCamouflage) formInnocentCamouflage.addEventListener('submit', submitCamouflageAction);
     if (btnSubmitCamouflage) btnSubmitCamouflage.onclick = submitCamouflageAction;
     if (inputCamouflage) {
       inputCamouflage.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') { e.preventDefault(); submitCamouflageAction(); }
+        if (e.key === 'Enter' || e.keyCode === 13) {
+          e.preventDefault();
+          submitCamouflageAction(e);
+        }
+      });
+      inputCamouflage.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter' || e.keyCode === 13) {
+          e.preventDefault();
+          submitCamouflageAction(e);
+        }
       });
     }
 
@@ -329,6 +403,24 @@ const SpyUI = {
         if (!ClientState.isHost) return;
         SoundFX.playClick();
         socket.emit('return_to_lobby');
+      };
+    }
+
+    // Host Timer Controls
+    const btnAdd30 = document.getElementById('btnSpyTimerAdd30');
+    const btnSkipTo1 = document.getElementById('btnSpyTimerSkipTo1');
+    if (btnAdd30) {
+      btnAdd30.onclick = () => {
+        if (!ClientState.isHost) return;
+        SoundFX.playClick();
+        socket.emit('game_action', { action: 'adjust_timer', delta: 30 });
+      };
+    }
+    if (btnSkipTo1) {
+      btnSkipTo1.onclick = () => {
+        if (!ClientState.isHost) return;
+        SoundFX.playClick();
+        socket.emit('game_action', { action: 'adjust_timer', set: 1 });
       };
     }
 

@@ -70,6 +70,19 @@ app.get(['/join/:code', '/room/:code'], (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
+// Server Reset Endpoint — disconnects all sockets, clears all rooms
+// Usage: GET or POST /api/reset
+// The next player to connect will become host of a fresh room.
+app.all('/api/reset', (req, res) => {
+  const result = roomManager.resetAll();
+  console.log(`🔄 /api/reset called — cleared ${result.roomCount} rooms, disconnected ${result.socketCount} players.`);
+  res.json({
+    success: true,
+    message: `Server reset complete. Cleared ${result.roomCount} room(s) and disconnected ${result.socketCount} player(s). Next person to join becomes the host.`,
+    ...result
+  });
+});
+
 // Socket.io Connection Handlers
 io.on('connection', (socket) => {
   console.log(`🔌 Client Connected: ${socket.id}`);
