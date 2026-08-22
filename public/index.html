@@ -64,7 +64,7 @@
           <div class="player-input-card">
             <label for="inputPlayerName" class="form-label">Your Nickname</label>
             <div class="name-input-group">
-              <select id="selectAvatar" class="avatar-select">
+              <select id="selectAvatar" class="avatar-select" title="Choose your avatar">
                 <option value="😎">😎</option>
                 <option value="🦁">🦁</option>
                 <option value="🦊">🦊</option>
@@ -74,6 +74,37 @@
                 <option value="🍕">🍕</option>
                 <option value="🔥">🔥</option>
                 <option value="👻">👻</option>
+                <option value="🦄">🦄</option>
+                <option value="🐼">🐼</option>
+                <option value="🐯">🐯</option>
+                <option value="🐶">🐶</option>
+                <option value="🐱">🐱</option>
+                <option value="🐵">🐵</option>
+                <option value="🐸">🐸</option>
+                <option value="🐙">🐙</option>
+                <option value="🦖">🦖</option>
+                <option value="🤖">🤖</option>
+                <option value="🧙‍♂️">🧙‍♂️</option>
+                <option value="🥷">🥷</option>
+                <option value="🦸‍♂️">🦸‍♂️</option>
+                <option value="🧛">🧛</option>
+                <option value="🤠">🤠</option>
+                <option value="💎">💎</option>
+                <option value="⚡">⚡</option>
+                <option value="🌮">🌮</option>
+                <option value="🍔">🍔</option>
+                <option value="🍩">🍩</option>
+                <option value="🥑">🥑</option>
+                <option value="🎮">🎮</option>
+                <option value="🎸">🎸</option>
+                <option value="🎯">🎯</option>
+                <option value="🛸">🛸</option>
+                <option value="🪐">🪐</option>
+                <option value="🌈">🌈</option>
+                <option value="⭐">⭐</option>
+                <option value="🎉">🎉</option>
+                <option value="🔮">🔮</option>
+                <option value="🎭">🎭</option>
               </select>
               <input type="text" id="inputPlayerName" class="form-control" placeholder="Enter your name" maxlength="15">
             </div>
@@ -108,9 +139,14 @@
         <div id="hostGameSelector" class="glass-panel game-selector-panel">
           <div class="panel-header-with-action">
             <h3>Select Game to Play</h3>
-            <button id="btnOpenSettings" class="btn btn-glass btn-xs">
-              ⚙️ Game House Rules & Settings
-            </button>
+            <div class="lobby-header-actions" style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button id="btnLobbyRules" class="btn btn-glass btn-xs">
+                📖 How to Play & Rules
+              </button>
+              <button id="btnOpenSettings" class="btn btn-glass btn-xs">
+                ⚙️ Game House Rules & Settings
+              </button>
+            </div>
           </div>
           <div id="lobbyGamesList" class="lobby-games-grid"></div>
         </div>
@@ -202,6 +238,9 @@
             <span>Your Role:</span> <strong id="cnMyRoleText">Operative</strong>
           </div>
           <div class="spymaster-actions">
+            <button id="btnCNRules" class="btn btn-glass btn-xs">
+              📖 Rules
+            </button>
             <button id="btnCNRestart" class="btn btn-warning btn-xs">
               🔄 Restart Game
             </button>
@@ -297,6 +336,9 @@
               <button id="btnSpyTimerAdd30" class="btn btn-glass btn-sm">⏩ +30s</button>
               <button id="btnSpyTimerSkipTo1" class="btn btn-warning btn-sm">⏭ Skip Timer</button>
             </div>
+            <button id="btnSpyRules" class="btn btn-glass btn-sm">
+              📖 Rules
+            </button>
             <button id="btnSpyRestart" class="btn btn-secondary btn-sm">
               🔄 Restart Game
             </button>
@@ -384,6 +426,162 @@
         </div>
       </section>
 
+      <!-- ================= 5. MAFIA GAME VIEW ================= -->
+      <section id="viewMafia" class="view-section hidden">
+        <!-- Mafia Header -->
+        <div class="game-header glass-panel">
+          <div class="header-status-group">
+            <span id="mafiaRoundBadge" class="badge-pill round-pill">Round 1</span>
+            <span id="mafiaPhaseBadge" class="phase-badge mafia-night-badge">🌙 NIGHT: MURDERERS</span>
+            <div id="mafiaTimerContainer" class="timer-display hidden">
+              ⏱️ <span id="mafiaTimerText">02:00</span>
+            </div>
+          </div>
+          <div class="game-header-actions">
+            <div id="mafiaHostTimerControls" class="hidden host-timer-controls">
+              <button id="btnMafiaTimerAdd30" class="btn btn-glass btn-sm">⏩ +30s</button>
+              <button id="btnMafiaTimerSkipTo1" class="btn btn-warning btn-sm">⏭ Skip Timer</button>
+            </div>
+            <button id="btnMafiaRules" class="btn btn-glass btn-sm">
+              📖 Rules
+            </button>
+            <button id="btnMafiaRestart" class="btn btn-secondary btn-sm hidden">
+              🔄 Restart
+            </button>
+            <button id="btnMafiaLeave" class="btn btn-danger btn-sm hidden">
+              🚪 Lobby
+            </button>
+          </div>
+        </div>
+
+        <!-- Secret Role Card (Tap to Peek) -->
+        <div id="mafiaRoleCardContainer" class="secret-card-container">
+          <div id="mafiaSecretCard" class="secret-card glass-panel">
+            <div class="secret-card-front">
+              <span class="peek-icon">👁️</span>
+              <h3>Tap & Hold to Peek Role</h3>
+              <p class="peek-hint">Keep hidden from friends sitting next to you!</p>
+            </div>
+            <div class="secret-card-back">
+              <div class="role-icon-large" id="mafiaRoleIcon">🎭</div>
+              <h2 id="mafiaRoleTitle" class="secret-location">Your Role</h2>
+              <p id="mafiaRoleDesc" class="role-description-text">Role instructions</p>
+              <div id="mafiaRoleStatusBadge" class="role-status-badge"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Host Master Control Panel (Narrator Cues & God-Mode Dashboard) -->
+        <div id="mafiaHostPanel" class="glass-panel host-master-panel hidden">
+          <div class="host-panel-header">
+            <span class="host-crown">👑</span>
+            <h3>Narrator Master Board (Host Only)</h3>
+          </div>
+          <div id="mafiaHostPromptScript" class="host-prompt-box">
+            <!-- Script prompts populated dynamically -->
+          </div>
+          <div id="mafiaHostLiveStatus" class="host-live-status">
+            <!-- Live target/save/investigation status -->
+          </div>
+          <div class="host-advance-row">
+            <button id="btnMafiaHostAdvance" class="btn btn-primary btn-lg btn-block">
+              <span>⚡</span> Next Phase ➔
+            </button>
+          </div>
+
+          <!-- All Player Roles (Host Only God-Mode Grid) -->
+          <div id="mafiaHostRolesCard" class="host-subpanel" style="margin-top: 16px;">
+            <div class="subpanel-header">
+              <h4>🎭 All Player Roles (Host Only)</h4>
+            </div>
+            <div id="mafiaHostRolesGrid" class="host-roles-grid">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Dedicated Secret Action Ledger (Host Only) -->
+          <div id="mafiaHostActionLedgerCard" class="host-subpanel" style="margin-top: 16px;">
+            <div class="subpanel-header">
+              <h4>📜 Secret Action Ledger (Host Only)</h4>
+            </div>
+            <div id="mafiaHostActionLedgerList" class="host-ledger-list">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Night Action Panel (Murderer / Doctor / Detective / Sleep) -->
+        <div id="mafiaNightContainer" class="glass-panel night-action-panel hidden">
+          <div class="panel-header-centered">
+            <h3 id="mafiaNightTitle">🌙 Night Action</h3>
+            <p id="mafiaNightSubtitle" class="panel-subtitle">Select your target below</p>
+          </div>
+          <div id="mafiaNightActionContent" class="night-action-content">
+            <!-- Populated per role -->
+          </div>
+        </div>
+
+        <!-- Morning Announcement Panel -->
+        <div id="mafiaMorningPanel" class="glass-panel morning-panel hidden">
+          <div id="mafiaMorningBanner" class="morning-banner">
+            <!-- Saved / Murdered message -->
+          </div>
+        </div>
+
+        <!-- Discussion Panel (With Detective Ledger) -->
+        <div id="mafiaDiscussionPanel" class="glass-panel discussion-panel hidden">
+          <div class="discussion-header">
+            <h3>💬 Town Discussion Open</h3>
+            <p class="panel-subtitle">Debate and interrogate suspects in person!</p>
+          </div>
+          <div id="mafiaDetectiveNotebook" class="detective-notebook-card hidden">
+            <!-- Detective investigation history -->
+          </div>
+        </div>
+
+        <!-- Daytime Voting Ballot Panel -->
+        <div id="mafiaVotingPanel" class="glass-panel voting-panel hidden">
+          <h3>🗳️ Secret Town Voting Ballot</h3>
+          <div id="mafiaVotingStatus" class="voting-status-text">Select one suspect to vote for elimination:</div>
+          <div id="mafiaVotingGrid" class="voting-grid">
+            <!-- Candidates -->
+          </div>
+        </div>
+
+        <!-- Voting Tally Results Panel -->
+        <div id="mafiaTallyPanel" class="glass-panel tally-panel hidden">
+          <div id="mafiaTallyBanner" class="tally-banner"></div>
+          <div id="mafiaTallyGrid" class="tally-grid"></div>
+        </div>
+
+        <!-- Game Over & Full Match Timeline Ledger -->
+        <div id="mafiaEndGameContainer" class="glass-panel end-game-panel hidden">
+          <div id="mafiaWinnerBanner" class="winner-banner"></div>
+          
+          <div class="end-game-section">
+            <h3>🎭 True Roles Revealed</h3>
+            <div id="mafiaRevealedRolesGrid" class="roles-revealed-grid"></div>
+          </div>
+
+          <div class="end-game-section">
+            <h3>📜 Complete Match Timeline Ledger</h3>
+            <div id="mafiaTimelineList" class="timeline-ledger-list"></div>
+          </div>
+        </div>
+
+        <!-- Game Log -->
+        <div class="glass-panel log-panel">
+          <h4>Game Log</h4>
+          <div id="mafiaLogContainer" class="log-container"></div>
+        </div>
+
+        <!-- Party Players Roster Panel at Bottom -->
+        <div id="mafiaPlayersRosterPanel" class="glass-panel team-roster-panel">
+          <h4>👥 Party Players in Match</h4>
+          <div id="mafiaPlayersRosterList" class="roster-player-list" style="flex-direction: row; flex-wrap: wrap; gap: 8px;"></div>
+        </div>
+      </section>
+
     </main>
 
     <!-- ================= MODALS ================= -->
@@ -407,7 +605,145 @@
       </div>
     </div>
 
+    <!-- How to Play & Game Rules Modal -->
+    <div id="modalGameRules" class="modal-overlay hidden">
+      <div class="modal-card glass-panel rules-modal-card">
+        <button id="btnCloseRules" class="btn-close">&times;</button>
+        <div class="rules-modal-header">
+          <h3>📖 How to Play & Rules</h3>
+          <p class="modal-subtitle">Select a game below for full rules and tips</p>
+        </div>
 
+        <!-- Rules Tab Navigation -->
+        <div class="rules-tabs-nav">
+          <button class="rules-tab-btn active" data-game-tab="rulesCodenames">
+            🕵️‍♂️ Codenames
+          </button>
+          <button class="rules-tab-btn" data-game-tab="rulesSpy">
+            🕵️‍♀️ The Imposter
+          </button>
+          <button class="rules-tab-btn" data-game-tab="rulesMafia">
+            🔪 Mafia
+          </button>
+        </div>
+
+        <!-- Tab 1: Codenames Rules -->
+        <div id="rulesCodenames" class="rules-tab-content active">
+          <div class="rule-section">
+            <h4>🎯 The Objective</h4>
+            <p>Two rival spymasters know the secret identities of 25 agents. Teammates must guess all their team's cards (Red or Blue) before the opposing team, while avoiding the deadly Assassin card!</p>
+          </div>
+
+          <div class="rule-section">
+            <h4>👥 Roles</h4>
+            <ul>
+              <li><strong>Spymasters:</strong> See the secret 5x5 color key grid. Give 1-word clues + number of cards (e.g. <em>"Ocean 2"</em>).</li>
+              <li><strong>Operatives:</strong> Only see word cards. Discuss as a team and tap cards to guess words.</li>
+            </ul>
+          </div>
+
+          <div class="rule-section">
+            <h4>🔄 Turn Flow</h4>
+            <ol>
+              <li>Spymaster gives <strong>1 clue word</strong> and <strong>1 number</strong> (number of cards related to the clue).</li>
+              <li>Operatives discuss and tap cards one at a time (can make up to <code>Clue Number + 1</code> guesses):
+                <ul>
+                  <li>✅ <strong>Team Card:</strong> Scores +1 point. Team can keep guessing or tap <strong>Pass Turn</strong>.</li>
+                  <li>⚪ <strong>Bystander (Neutral):</strong> Turn ends immediately.</li>
+                  <li>❌ <strong>Opposing Card:</strong> Turn ends immediately and gives the opposing team a free point!</li>
+                  <li>☠️ <strong>Assassin (Black Card):</strong> <strong>INSTANT LOSS!</strong> The team that taps the Assassin loses the game immediately.</li>
+                </ul>
+              </li>
+            </ol>
+          </div>
+
+          <div class="rule-section">
+            <h4>🏆 Winning</h4>
+            <p>The first team to contact all their team's secret agents wins! (Or win if opponents tap the Assassin).</p>
+          </div>
+        </div>
+
+        <!-- Tab 2: The Imposter Game Rules -->
+        <div id="rulesSpy" class="rules-tab-content hidden">
+          <div class="rule-section">
+            <h4>🎯 The Objective</h4>
+            <ul>
+              <li><strong>Innocents:</strong> Unmask the hidden Imposter(s) through subtle questioning before time runs out.</li>
+              <li><strong>The Imposter:</strong> Blend in, deduce the secret location from dialogue, or guess the location without getting caught!</li>
+            </ul>
+          </div>
+
+          <div class="rule-section">
+            <h4>🎭 Secret Roles</h4>
+            <ul>
+              <li><strong>Innocents:</strong> See the exact Category and Secret Location (e.g., <em>Category: Landmarks, Location: Eiffel Tower</em>).</li>
+              <li><strong>The Imposter:</strong> Knows they are the spy, but the location is secret (<code>❓ SECRET</code>).</li>
+            </ul>
+          </div>
+
+          <div class="rule-section">
+            <h4>🔄 Game Phases</h4>
+            <ol>
+              <li><strong>Discussion Phase (2-5 min):</strong> Ask each other questions in person (e.g. <em>"Is it hot here?"</em>, <em>"Do you pay to enter?"</em>). Don't make questions too obvious or the spy will figure out the location!</li>
+              <li><strong>Cover-Typing Phase (20s):</strong> Everyone types on their screen simultaneously. Innocents type a verification word; Imposters can submit a location guess or type <code>PASS</code>.</li>
+              <li><strong>Voting Phase (1 min):</strong> Cast secret votes on who you suspect is the Imposter.</li>
+              <li><strong>Results Tally:</strong> The player with the most votes is ousted (role remains hidden until game ends).</li>
+            </ol>
+          </div>
+
+          <div class="rule-section">
+            <h4>🏆 Winning</h4>
+            <ul>
+              <li><strong>Innocents Win:</strong> All Imposters are eliminated, or an Imposter makes a wrong location guess.</li>
+              <li><strong>Imposters Win:</strong> An Imposter correctly guesses the secret word, or living Imposters equal living Innocents.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Tab 3: Mafia Rules -->
+        <div id="rulesMafia" class="rules-tab-content hidden">
+          <div class="rule-section">
+            <h4>🎯 The Objective</h4>
+            <ul>
+              <li><strong>Civilians & Town:</strong> Find and eliminate all Murderers through night investigations and daytime voting.</li>
+              <li><strong>Mafia / Murderers:</strong> Eliminate townspeople until Murderers equal or outnumber living civilians.</li>
+            </ul>
+          </div>
+
+          <div class="rule-section">
+            <h4>🎭 Secret Roles</h4>
+            <ul>
+              <li><strong>👑 Host (Narrator):</strong> Runs the game, reads narration prompts aloud, sees all roles, and controls phase progression and timers.</li>
+              <li><strong>🔪 Murderers (1-3):</strong> Secretly choose a victim each night. If split, swap votes live on-screen to reach consensus.</li>
+              <li><strong>💉 Doctor (1):</strong> Protects 1 player each night. <em>Rule: Cannot protect the same person two rounds in a row.</em></li>
+              <li><strong>🔍 Detective (1):</strong> Investigates 1 suspect each night. Receives immediate feedback: 🔴 Murderer or 🟢 Not Murderer.</li>
+              <li><strong>😇 Civilians:</strong> Sleep at night; debate and vote during the day.</li>
+            </ul>
+          </div>
+
+          <div class="rule-section">
+            <h4>🔄 Round Flow</h4>
+            <ol>
+              <li><strong>🌙 Night 1 (Murderers):</strong> Murderers pick a victim together.</li>
+              <li><strong>🌙 Night 2 (Doctor):</strong> Doctor selects someone to protect. If it matches the victim, the victim survives!</li>
+              <li><strong>🌙 Night 3 (Detective):</strong> Detective investigates 1 living suspect.</li>
+              <li><strong>🌅 Day 4 (Morning Story):</strong> Host announces whether someone was murdered or saved.</li>
+              <li><strong>💬 Day 5 (Town Discussion):</strong> Timed in-person debate (Host can add <code>+30s</code> or skip).</li>
+              <li><strong>🗳️ Day 6 (Town Voting):</strong> Secret voting ballot on living suspects with live anonymous vote tally.</li>
+              <li><strong>📊 Day 7 (Results Tally):</strong> Strict majority (more than 50% of living town votes) eliminates a suspect. (Identity remains secret unless the last murderer dies).</li>
+            </ol>
+          </div>
+
+          <div class="rule-section">
+            <h4>🏆 Winning</h4>
+            <ul>
+              <li><strong>Civilians Win:</strong> When all Murderers are eliminated!</li>
+              <li><strong>Mafia Wins:</strong> When living Murderers equal or outnumber living Civilians (≥).</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Game House Rules & Settings Modal -->
     <div id="modalSettings" class="modal-overlay hidden">
@@ -444,6 +780,7 @@
   <script src="/js/socket-client.js"></script>
   <script src="/js/games/codenames.js"></script>
   <script src="/js/games/spy.js"></script>
+  <script src="/js/games/mafia.js"></script>
   <script src="/js/hub.js"></script>
 </body>
 </html>

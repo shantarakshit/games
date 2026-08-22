@@ -9,6 +9,7 @@ const GameRegistry = require('./core/GameRegistry');
 const RoomManager = require('./core/RoomManager');
 
 const app = express();
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
@@ -174,8 +175,9 @@ io.on('connection', (socket) => {
   // Transfer Host Role (Host only)
   socket.on('transfer_host', (data, callback) => {
     const roomCode = socket.roomCode;
-    if (!roomCode) return;
-    const result = roomManager.transferHost(roomCode, socket.id, data.targetId);
+    if (!roomCode || !data) return;
+    const targetId = data.targetId || data.newHostId;
+    const result = roomManager.transferHost(roomCode, socket.id, targetId);
     if (callback) callback(result);
   });
 

@@ -1,7 +1,7 @@
 {
   "name": "party-games-hub",
   "version": "1.0.0",
-  "description": "Local-first multi-device Party Games Hub featuring Codenames and Spy (Spyfall)",
+  "description": "Local-first multi-device Party Games Hub featuring Codenames, Spy (Spyfall), and Mafia",
   "main": "server/server.js",
   "type": "commonjs",
   "scripts": {
@@ -23,8 +23,7 @@
     "qrcode": "^1.5.3",
     "socket.io": "^4.7.5"
   },
-  "devDependencies": {
-    "puppeteer": "^25.5.0",
-    "socket.io-client": "^4.8.3"
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

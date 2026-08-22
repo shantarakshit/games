@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const viewLobby = document.getElementById('viewLobby');
   const viewCodenames = document.getElementById('viewCodenames');
   const viewSpy = document.getElementById('viewSpy');
+  const viewMafia = document.getElementById('viewMafia');
 
   const lobbyRoomCode = document.getElementById('lobbyRoomCode');
   const playersList = document.getElementById('playersList');
@@ -51,6 +52,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const lastName = localStorage.getItem('party_last_name') || '';
   if (lastName && inputPlayerName) inputPlayerName.value = lastName;
 
+  // Randomize initial emoji avatar on join (players can still select their own)
+  if (selectAvatar) {
+    const options = Array.from(selectAvatar.options).map(o => o.value);
+    const savedAvatar = localStorage.getItem('party_last_avatar');
+    if (savedAvatar && options.includes(savedAvatar)) {
+      selectAvatar.value = savedAvatar;
+    } else if (options.length > 0) {
+      const randomAvatar = options[Math.floor(Math.random() * options.length)];
+      selectAvatar.value = randomAvatar;
+    }
+  }
+
   // Fetch Server Info & Auto-detect IP
   fetch('/api/info')
     .then(res => res.json())
@@ -68,8 +81,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Check URL path for auto-joining room (e.g. /join/CODE)
   const pathParts = window.location.pathname.split('/');
-  if (pathParts[1] === 'join' && pathParts[2] && inputRoomCode) {
-    inputRoomCode.value = pathParts[2].toUpperCase();
+  if (pathParts[1] === 'join' && pathParts[2]) {
+    const codeFromUrl = pathParts[2].toUpperCase();
+    if (inputRoomCode) inputRoomCode.value = codeFromUrl;
+    ClientState.roomCode = codeFromUrl;
   }
 
   // Render Available Games Gallery
@@ -96,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Switch View Helper
   function showView(viewId) {
-    [viewHome, viewLobby, viewCodenames, viewSpy].forEach(v => {
+    [viewHome, viewLobby, viewCodenames, viewSpy, viewMafia].forEach(v => {
       if (v) v.classList.add('hidden');
     });
     const targetView = document.getElementById(viewId);
@@ -180,8 +195,10 @@ document.addEventListener('DOMContentLoaded', () => {
       SoundFX.playClick();
       savePlayerCredentials();
 
+      const targetRoomCode = (inputRoomCode && inputRoomCode.value ? inputRoomCode.value.trim().toUpperCase() : '') || 'MAIN';
+
       socket.emit('join_room', {
-        roomCode: 'MAIN',
+        roomCode: targetRoomCode,
         playerName: ClientState.playerName,
         avatar: ClientState.avatar
       }, (res) => {
@@ -190,7 +207,13 @@ document.addEventListener('DOMContentLoaded', () => {
           ClientState.isHost = res.room.hostId === socket.id;
           updateLobbyUI(res.room);
           if (res.room.gameState === 'playing' && res.room.gameId) {
-            showView(res.room.gameId === 'codenames' ? 'viewCodenames' : 'viewSpy');
+            if (res.room.gameId === 'codenames') {
+              showView('viewCodenames');
+            } else if (res.room.gameId === 'spy') {
+              showView('viewSpy');
+            } else if (res.room.gameId === 'mafia') {
+              showView('viewMafia');
+            }
           } else {
             showView('viewLobby');
           }
@@ -296,6 +319,9 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (ClientState.currentGame.gameId === 'spy') {
         const timerEl = document.getElementById('spyTimerText');
         if (timerEl) timerEl.innerText = timeFormatted;
+      } else if (ClientState.currentGame.gameId === 'mafia') {
+        const timerEl = document.getElementById('mafiaTimerText');
+        if (timerEl) timerEl.innerText = timeFormatted;
       }
     }
   });
@@ -310,6 +336,9 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (gameState.gameId === 'spy') {
       showView('viewSpy');
       SpyUI.render(gameState);
+    } else if (gameState.gameId === 'mafia') {
+      showView('viewMafia');
+      MafiaUI.render(gameState);
     }
   });
 
@@ -536,6 +565,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let warningMsg = '';
         if (!hasMinPlayers && room.gameId === 'spy') {
           warningMsg = `⚠️ The Imposter Game requires at least ${minReq} players to start (currently ${room.players.length} in room).`;
+        } else if (!hasMinPlayers && room.gameId === 'mafia') {
+          warningMsg = `⚠️ Mafia requires at least ${minReq} players to start (currently ${room.players.length} in room, or 1 for test mode).`;
         }
 
         if (lobbyStartWarning) {
@@ -672,6 +703,66 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (btnCloseSettings) btnCloseSettings.onclick = () => { if (modalSettings) modalSettings.classList.add('hidden'); };
+
+  // ================= GAME RULES MODAL CONTROLLER =================
+  const modalGameRules = document.getElementById('modalGameRules');
+  const btnCloseRules = document.getElementById('btnCloseRules');
+  const btnLobbyRules = document.getElementById('btnLobbyRules');
+  const btnCNRules = document.getElementById('btnCNRules');
+  const btnSpyRules = document.getElementById('btnSpyRules');
+  const btnMafiaRules = document.getElementById('btnMafiaRules');
+
+  function openRulesModal(targetGameTab = 'rulesCodenames') {
+    SoundFX.playClick();
+    if (!modalGameRules) return;
+
+    // Switch tab
+    const tabs = modalGameRules.querySelectorAll('.rules-tab-btn');
+    const contents = modalGameRules.querySelectorAll('.rules-tab-content');
+
+    tabs.forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.gameTab === targetGameTab);
+    });
+
+    contents.forEach(content => {
+      content.classList.toggle('active', content.id === targetGameTab);
+      content.classList.toggle('hidden', content.id !== targetGameTab);
+    });
+
+    modalGameRules.classList.remove('hidden');
+  }
+
+  // Bind Rules Buttons
+  if (btnLobbyRules) {
+    btnLobbyRules.onclick = () => {
+      const selectedGameId = (ClientState.currentRoom && ClientState.currentRoom.gameId) || 'codenames';
+      const tabMap = { codenames: 'rulesCodenames', spy: 'rulesSpy', mafia: 'rulesMafia' };
+      openRulesModal(tabMap[selectedGameId] || 'rulesCodenames');
+    };
+  }
+
+  if (btnCNRules) btnCNRules.onclick = () => openRulesModal('rulesCodenames');
+  if (btnSpyRules) btnSpyRules.onclick = () => openRulesModal('rulesSpy');
+  if (btnMafiaRules) btnMafiaRules.onclick = () => openRulesModal('rulesMafia');
+
+  if (btnCloseRules) {
+    btnCloseRules.onclick = () => {
+      SoundFX.playClick();
+      if (modalGameRules) modalGameRules.classList.add('hidden');
+    };
+  }
+
+  // Rules Tab Navigation Click Handler
+  if (modalGameRules) {
+    const tabBtns = modalGameRules.querySelectorAll('.rules-tab-btn');
+    tabBtns.forEach(btn => {
+      btn.onclick = () => {
+        SoundFX.playClick();
+        const tabId = btn.dataset.gameTab;
+        openRulesModal(tabId);
+      };
+    });
+  }
 
   // Host Start Game
   if (btnStartGame) {
