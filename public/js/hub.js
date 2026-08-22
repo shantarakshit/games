@@ -52,15 +52,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const lastName = localStorage.getItem('party_last_name') || '';
   if (lastName && inputPlayerName) inputPlayerName.value = lastName;
 
-  // Randomize initial emoji avatar on join (players can still select their own)
+  // Randomize initial emoji avatar on load/join (players can still select their own)
   if (selectAvatar) {
     const options = Array.from(selectAvatar.options).map(o => o.value);
-    const savedAvatar = localStorage.getItem('party_last_avatar');
-    if (savedAvatar && options.includes(savedAvatar)) {
-      selectAvatar.value = savedAvatar;
-    } else if (options.length > 0) {
+    if (options.length > 0) {
       const randomAvatar = options[Math.floor(Math.random() * options.length)];
       selectAvatar.value = randomAvatar;
+      ClientState.avatar = randomAvatar;
     }
   }
 
@@ -532,13 +530,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const lobbyStartWarning = document.getElementById('lobbyStartWarning');
         const selectedGame = (serverInfo && serverInfo.games) ? serverInfo.games.find(g => g.id === room.gameId) : null;
         const minReq = selectedGame ? (selectedGame.minPlayers || 4) : 4;
-        const hasMinPlayers = room.players.length >= minReq || room.players.length === 1;
-        const canStart = (bothClaimed || room.players.length === 1) && hasMinPlayers;
+        const hasMinPlayers = room.players.length >= minReq;
+        const canStart = bothClaimed && hasMinPlayers;
 
         let warningMsg = '';
         if (!hasMinPlayers) {
           warningMsg = `⚠️ Codenames requires at least ${minReq} players to start (currently ${room.players.length} in room).`;
-        } else if (!bothClaimed && room.players.length > 1) {
+        } else if (!bothClaimed) {
           warningMsg = `⚠️ Claim both RED Spymaster and BLUE Spymaster positions to start!`;
         }
 
@@ -560,13 +558,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const lobbyStartWarning = document.getElementById('lobbyStartWarning');
         const selectedGame = (serverInfo && serverInfo.games) ? serverInfo.games.find(g => g.id === room.gameId) : null;
         const minReq = selectedGame ? (selectedGame.minPlayers || 3) : 3;
-        const hasMinPlayers = room.players.length >= minReq || room.players.length === 1;
+        const hasMinPlayers = room.players.length >= minReq;
 
         let warningMsg = '';
         if (!hasMinPlayers && room.gameId === 'spy') {
           warningMsg = `⚠️ The Imposter Game requires at least ${minReq} players to start (currently ${room.players.length} in room).`;
         } else if (!hasMinPlayers && room.gameId === 'mafia') {
-          warningMsg = `⚠️ Mafia requires at least ${minReq} players to start (currently ${room.players.length} in room, or 1 for test mode).`;
+          warningMsg = `⚠️ Mafia requires at least ${minReq} players to start (currently ${room.players.length} in room).`;
         }
 
         if (lobbyStartWarning) {

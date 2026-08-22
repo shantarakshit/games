@@ -343,15 +343,6 @@ class RoomManager {
       let redSpymaster = Array.from(room.players.values()).find(p => p.team === 'red' && p.role === 'spymaster');
       let blueSpymaster = Array.from(room.players.values()).find(p => p.team === 'blue' && p.role === 'spymaster');
 
-      // SINGLE PLAYER TEST MODE: If 1 player in room, allow single player to start test game
-      if (room.players.size === 1) {
-        const singlePlayer = room.players.values().next().value;
-        singlePlayer.team = 'red';
-        singlePlayer.role = 'spymaster';
-        redSpymaster = singlePlayer;
-        blueSpymaster = { id: 'bot_blue_spy', name: 'Virtual Spymaster' };
-      }
-
       if (!redSpymaster || !blueSpymaster) {
         this.io.to(code).emit('system_message', {
           type: 'warning',
@@ -364,11 +355,11 @@ class RoomManager {
     const gamePlugin = GameRegistry.getGame(room.gameId);
     if (!gamePlugin) return;
 
-    // Minimum player count enforcement (allow 1-player test mode)
-    if (room.players.size > 1 && room.players.size < (gamePlugin.minPlayers || 1)) {
+    // Minimum player count enforcement
+    if (room.players.size < (gamePlugin.minPlayers || 1)) {
       this.io.to(code).emit('system_message', {
         type: 'warning',
-        text: `⚠️ ${gamePlugin.name} requires at least ${gamePlugin.minPlayers} players to start (or 1 player for solo test mode)!`
+        text: `⚠️ ${gamePlugin.name} requires at least ${gamePlugin.minPlayers} players to start!`
       });
       return { success: false, message: `${gamePlugin.name} requires at least ${gamePlugin.minPlayers} players to start!` };
     }

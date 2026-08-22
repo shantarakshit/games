@@ -76,12 +76,7 @@ class MafiaInstance {
 
     // 1. Identify Non-Host Players
     const allSockets = Array.from(this.room.players.keys());
-    let playerSockets = allSockets.filter(id => id !== this.hostSocketId);
-
-    // Test mode fallback: If solo/test player is also host, allow player to be host + participant
-    if (playerSockets.length === 0 && allSockets.length > 0) {
-      playerSockets = [...allSockets];
-    }
+    const playerSockets = allSockets.filter(id => id !== this.hostSocketId);
 
     // 2. Determine Murderers Count
     let numMurderers = 1;
@@ -115,7 +110,7 @@ class MafiaInstance {
     const shuffled = [...playerSockets].sort(() => Math.random() - 0.5);
     
     // Assign Host
-    if (this.hostSocketId && allSockets.includes(this.hostSocketId) && playerSockets.length > 1) {
+    if (this.hostSocketId && allSockets.includes(this.hostSocketId)) {
       this.roles.set(this.hostSocketId, { role: 'host', isAlive: true });
     }
 
@@ -143,11 +138,6 @@ class MafiaInstance {
     while (cursor < shuffled.length) {
       const civId = shuffled[cursor++];
       this.roles.set(civId, { role: 'civilian', isAlive: true });
-    }
-
-    // Test mode fallback: Ensure host is assigned if solo
-    if (playerSockets.length === 1 && !this.roles.has(this.hostSocketId)) {
-      this.roles.set(this.hostSocketId, { role: 'murderer', isAlive: true });
     }
 
     this.log = [{
