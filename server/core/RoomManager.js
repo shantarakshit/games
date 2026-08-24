@@ -1,5 +1,12 @@
 const GameRegistry = require('./GameRegistry');
+const PlayerManager = require('./PlayerManager');
+const RoomBroadcaster = require('./RoomBroadcaster');
+const { ROOM_CODE_CHARS, DEFAULT_ROOM_CODE_LENGTH } = require('../config');
 
+/**
+ * RoomManager
+ * Coordinates game rooms, player sessions, game plugin instantiation, and game state routing.
+ */
 class RoomManager {
   constructor(io) {
     this.io = io;
@@ -7,34 +14,55 @@ class RoomManager {
   }
 
   /**
-   * Generate a unique 4-letter uppercase room code.
+   * Generate a unique uppercase room code.
+   * @returns {string}
    */
   generateRoomCode() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let code;
     do {
       code = '';
-      for (let i = 0; i < 4; i++) {
-        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      for (let i = 0; i < DEFAULT_ROOM_CODE_LENGTH; i++) {
+        code += ROOM_CODE_CHARS.charAt(Math.floor(Math.random() * ROOM_CODE_CHARS.length));
       }
     } while (this.rooms.has(code));
     return code;
   }
 
   /**
+   * Resolve room by code, with single-room fallback if code is empty or 'MAIN'.
+   * @param {string} code 
+   * @returns {Object|null}
+   */
+  resolveRoom(code) {
+    const cleanCode = (code || '').toUpperCase().trim();
+    let room = this.rooms.get(cleanCode);
+
+    // Single Room Mode Fallback: Auto-resolve to active room if code is empty or MAIN
+    if (!room && this.rooms.size > 0) {
+      room = this.rooms.values().next().value;
+    }
+    return room;
+  }
+
+  /**
    * Create a new room with a host.
    */
-  createRoom(hostSocket, hostName, avatar = '😎') {
+  createRoom(hostSocket, hostName, avatar = '😎', pin = '') {
     const code = this.generateRoomCode();
-    const player = {
-      id: hostSocket.id,
-      name: hostName || 'Host',
+    const cleanName = (hostName || 'Host').trim();
+    const cleanPin = String(pin || '0000').trim().replace(/\D/g, '').slice(0, 4) || '0000';
+
+    const player = PlayerManager.createPlayerModel(
+      hostSocket.id,
+      cleanName,
       avatar,
-      isHost: true,
-      isReady: true,
-      team: 'red',
-      role: 'operative'
-    };
+      cleanPin,
+      true,
+      'red'
+    );
+
+    const userPins = new Map();
+    userPins.set(cleanName.toLowerCase(), cleanPin);
 
     const room = {
       code,
@@ -43,6 +71,7 @@ class RoomManager {
       gameInstance: null,
       gameState: 'lobby',
       players: new Map([[hostSocket.id, player]]),
+      userPins,
       settings: {
         timer: 300,
         spiesCount: 1,
@@ -55,89 +84,74 @@ class RoomManager {
     hostSocket.join(code);
     hostSocket.roomCode = code;
 
-    console.log(`🏠 Room Created: [${code}] by Host ${player.name} (${hostSocket.id})`);
+    console.log(`🏠 Room Created: [${code}] by Host ${player.name} (${hostSocket.id}) with PIN [****]`);
     return room;
   }
 
   /**
-   * Join or Reconnect to an existing room.
+   * Check if a username already exists in the active room.
    */
-  joinRoom(socket, code, playerName, avatar = '👾') {
-    code = (code || '').toUpperCase().trim();
-    let room = this.rooms.get(code);
+  checkUsername(code, playerName) {
+    const room = this.resolveRoom(code);
+    return PlayerManager.checkUsername(room, playerName);
+  }
 
-    // Single Room Mode Fallback: Auto-resolve to active room if code is empty or MAIN
-    if (!room && this.rooms.size > 0) {
-      room = this.rooms.values().next().value;
-      code = room.code;
-    }
-
+  /**
+   * Join or Reconnect to an existing room with 4-digit PIN verification.
+   */
+  joinRoom(socket, code, playerName, avatar = '👾', pin = '') {
+    const room = this.resolveRoom(code);
     if (!room) {
       return { success: false, message: 'No active game room found. Tap "Create Room" to start a party room!' };
     }
+    return PlayerManager.handleJoinOrReconnect(this, socket, room, playerName, avatar, pin);
+  }
 
-    const cleanName = (playerName || `Player ${room.players.size + 1}`).trim();
+  /**
+   * Explicit Player Leave Room (removes player immediately without 2-min away timer).
+   */
+  leaveRoom(socket, code) {
+    code = code || socket.roomCode;
+    if (!code) return { success: false, message: 'Room not found' };
 
-    // 1. RECONNECTION CHECK: Check if a player with matching nickname already exists in room
-    let existingPlayer = null;
-    let oldSocketId = null;
+    const room = this.rooms.get(code);
+    if (!room) return { success: false, message: 'Room not found' };
 
-    for (const [sId, p] of room.players.entries()) {
-      if (p.name.toLowerCase() === cleanName.toLowerCase()) {
-        existingPlayer = p;
-        oldSocketId = sId;
-        break;
+    const player = room.players.get(socket.id);
+    if (!player) return { success: false, message: 'Player not in room' };
+
+    PlayerManager.clearPlayerTimers(player);
+    room.players.delete(socket.id);
+    socket.leave(code);
+    socket.roomCode = null;
+
+    console.log(`👋 Player Left: ${player.name} explicitly left room [${code}]. Remaining players: ${room.players.size}`);
+
+    // If leaving player was host, reassign to next connected player
+    if (room.hostId === socket.id && room.players.size > 0) {
+      const nextActiveHost = Array.from(room.players.values()).find(p => p.connected && !p.hiddenFromLobby) || room.players.values().next().value;
+      if (nextActiveHost) {
+        nextActiveHost.isHost = true;
+        room.hostId = nextActiveHost.id;
+        if (room.gameInstance && 'hostSocketId' in room.gameInstance) {
+          room.gameInstance.hostSocketId = nextActiveHost.id;
+        }
+        console.log(`👑 Host transferred to: ${nextActiveHost.name}`);
       }
     }
 
-    if (existingPlayer) {
-      // Reconnect existing player with new socket ID!
-      room.players.delete(oldSocketId);
-      existingPlayer.id = socket.id;
-
-      if (room.hostId === oldSocketId) {
-        room.hostId = socket.id;
-        existingPlayer.isHost = true;
+    // If room is completely empty, clean up room
+    if (room.players.size === 0) {
+      if (room.gameInstance && typeof room.gameInstance.destroy === 'function') {
+        room.gameInstance.destroy();
       }
-
-      // Delegate reconnection state transfer to active game instance if applicable
-      if (room.gameInstance && typeof room.gameInstance.reconnectPlayer === 'function') {
-        room.gameInstance.reconnectPlayer(oldSocketId, socket.id);
-      }
-
-      room.players.set(socket.id, existingPlayer);
-      socket.join(code);
-      socket.roomCode = code;
-
-      console.log(`🔄 Player Reconnected: ${existingPlayer.name} rejoined room [${code}] with role [${existingPlayer.team.toUpperCase()} ${existingPlayer.role.toUpperCase()}]`);
+      this.rooms.delete(code);
+      console.log(`🗑️ Room [${code}] deleted (empty room).`);
+    } else {
       this.broadcastRoomUpdate(code);
-
-      if (room.gameState === 'playing' && room.gameInstance) {
-        this.broadcastGameState(code);
-      }
-
-      return { success: true, room: this.getRoomDTO(room), reconnected: true };
     }
 
-    // 2. NEW PLAYER JOIN
-    const player = {
-      id: socket.id,
-      name: cleanName,
-      avatar,
-      isHost: false,
-      isReady: false,
-      team: room.players.size % 2 === 0 ? 'red' : 'blue',
-      role: 'operative'
-    };
-
-    room.players.set(socket.id, player);
-    socket.join(code);
-    socket.roomCode = code;
-
-    console.log(`👤 Player Joined: ${player.name} joined room [${code}]`);
-    this.broadcastRoomUpdate(code);
-
-    return { success: true, room: this.getRoomDTO(room) };
+    return { success: true };
   }
 
   /**
@@ -156,6 +170,10 @@ class RoomManager {
     if (newHost) newHost.isHost = true;
     room.hostId = targetSocketId;
 
+    if (room.gameInstance && 'hostSocketId' in room.gameInstance) {
+      room.gameInstance.hostSocketId = targetSocketId;
+    }
+
     console.log(`👑 Host Transferred in room [${code}]: ${oldHost ? oldHost.name : currentHostSocketId} -> ${newHost.name}`);
     this.broadcastRoomUpdate(code);
     return { success: true };
@@ -172,6 +190,12 @@ class RoomManager {
     if (!room.players.has(targetSocketId)) return { success: false, message: 'Player not in room' };
 
     const kickedPlayer = room.players.get(targetSocketId);
+    if (kickedPlayer) {
+      PlayerManager.clearPlayerTimers(kickedPlayer);
+      if (room.userPins) {
+        room.userPins.delete(kickedPlayer.name.toLowerCase());
+      }
+    }
     room.players.delete(targetSocketId);
 
     const targetSocket = this.io ? this.io.sockets.sockets.get(targetSocketId) : null;
@@ -181,25 +205,29 @@ class RoomManager {
       targetSocket.emit('kicked_from_room', { message: 'You were removed from the lobby by the Host.' });
     }
 
-    console.log(`🚫 Player Kicked from room [${code}]: ${kickedPlayer ? kickedPlayer.name : targetSocketId}`);
+    console.log(`🚫 Player Kicked from room [${code}]: ${kickedPlayer ? kickedPlayer.name : targetSocketId} (PIN cleared)`);
     this.broadcastRoomUpdate(code);
     return { success: true };
   }
 
   /**
    * Reset the server: disconnect all sockets, clear all rooms.
-   * The next player to join will become host of a fresh room.
    */
   resetAll() {
     const roomCount = this.rooms.size;
     let socketCount = 0;
 
     for (const [code, room] of this.rooms.entries()) {
+      for (const player of room.players.values()) {
+        PlayerManager.clearPlayerTimers(player);
+      }
       for (const socketId of room.players.keys()) {
-        const sock = this.io.sockets.sockets.get(socketId);
+        const sock = this.io && this.io.sockets && this.io.sockets.sockets ? this.io.sockets.sockets.get(socketId) : null;
         if (sock) {
           sock.emit('server_reset', { message: 'The server has been reset by the administrator. Please refresh to rejoin.' });
-          sock.disconnect(true);
+          if (typeof sock.disconnect === 'function') {
+            sock.disconnect(true);
+          }
           socketCount++;
         }
       }
@@ -221,29 +249,7 @@ class RoomManager {
     if (!code || !this.rooms.has(code)) return;
 
     const room = this.rooms.get(code);
-    const player = room.players.get(socket.id);
-    const playerName = player ? player.name : socket.id;
-
-    // In lobby state, remove player. In active playing state, keep player record for reconnection!
-    if (room.gameState === 'lobby') {
-      room.players.delete(socket.id);
-      console.log(`👋 Player Left: ${playerName} left room [${code}]`);
-
-      if (room.players.size === 0) {
-        this.rooms.delete(code);
-        console.log(`🧹 Room Deleted: [${code}] (empty)`);
-      } else {
-        if (room.hostId === socket.id) {
-          const nextHost = room.players.values().next().value;
-          nextHost.isHost = true;
-          room.hostId = nextHost.id;
-          console.log(`👑 New Host Assigned: ${nextHost.name} for room [${code}]`);
-        }
-        this.broadcastRoomUpdate(code);
-      }
-    } else {
-      console.log(`🔌 Player Disconnected Mid-Game: ${playerName} (Can reconnect anytime via nickname)`);
-    }
+    PlayerManager.handleDisconnect(this, socket, room);
   }
 
   /**
@@ -257,7 +263,7 @@ class RoomManager {
     if (!room) return;
 
     const player = room.players.get(socket.id);
-    if (player) {
+    if (player && room.gameState === 'lobby') {
       if (action === 'set_team' && data.team) {
         player.team = data.team;
         player.role = 'operative';
@@ -281,7 +287,7 @@ class RoomManager {
   }
 
   /**
-   * Select a game for the room.
+   * Select a game in room.
    */
   selectGame(code, gameId) {
     const room = this.rooms.get(code);
@@ -291,14 +297,6 @@ class RoomManager {
     if (!gamePlugin) return;
 
     room.gameId = gameId;
-
-    if (!room.settings[gameId] && gamePlugin.settingsSchema) {
-      room.settings[gameId] = {};
-      gamePlugin.settingsSchema.forEach(setting => {
-        room.settings[gameId][setting.id] = setting.default;
-      });
-    }
-
     console.log(`🎮 Game Selected: [${gameId}] for room [${code}]`);
     this.broadcastRoomUpdate(code);
   }
@@ -316,11 +314,19 @@ class RoomManager {
 
     if (room.gameInstance) {
       Object.assign(room.gameInstance.settings, newSettings);
-      if (newSettings.timer !== undefined && newSettings.timer > 0) {
-        room.gameInstance.timerSeconds = newSettings.timer;
+      if (newSettings.timer !== undefined) {
+        const val = Number(newSettings.timer);
+        room.gameInstance.timerSeconds = isNaN(val) ? 0 : val;
+        if (room.gameInstance.timerSeconds <= 0 && typeof room.gameInstance.stopTimer === 'function') {
+          room.gameInstance.stopTimer();
+        }
       }
-      if (newSettings.timerPerTurn !== undefined && newSettings.timerPerTurn > 0) {
-        room.gameInstance.timerSeconds = newSettings.timerPerTurn;
+      if (newSettings.timerPerTurn !== undefined) {
+        const val = Number(newSettings.timerPerTurn);
+        room.gameInstance.timerSeconds = isNaN(val) ? 0 : val;
+        if (room.gameInstance.timerSeconds <= 0 && typeof room.gameInstance.stopTurnTimer === 'function') {
+          room.gameInstance.stopTurnTimer();
+        }
       }
     }
 
@@ -338,7 +344,27 @@ class RoomManager {
     const room = this.rooms.get(code);
     if (!room || !room.gameId) return;
 
-    // Requirement 5: For Codenames, verify both Spymasters are claimed before starting!
+    // 1. Check if any visible lobby player is Away (Game can only start when everyone is active)
+    const visiblePlayers = Array.from(room.players.values()).filter(p => p.hiddenFromLobby !== true);
+    const awayPlayers = visiblePlayers.filter(p => !p.connected || p.isAway);
+
+    if (awayPlayers.length > 0) {
+      this.io.to(code).emit('system_message', {
+        type: 'warning',
+        text: `⚠️ Cannot start game while players are Away (${awayPlayers.map(p => p.name).join(', ')}). All players must be active (no Away badge), or Host can Remove them.`
+      });
+      return { success: false, message: 'All players in the lobby must be active (no Away badge) to start game.' };
+    }
+
+    // 2. People away for 2-5 min (hiddenFromLobby) are NOT included in the game when it begins
+    for (const [sId, p] of room.players.entries()) {
+      if (p.hiddenFromLobby) {
+        PlayerManager.clearPlayerTimers(p);
+        room.players.delete(sId);
+      }
+    }
+
+    // 3. For Codenames, verify both Spymasters are claimed before starting!
     if (room.gameId === 'codenames') {
       let redSpymaster = Array.from(room.players.values()).find(p => p.team === 'red' && p.role === 'spymaster');
       let blueSpymaster = Array.from(room.players.values()).find(p => p.team === 'blue' && p.role === 'spymaster');
@@ -403,66 +429,40 @@ class RoomManager {
   }
 
   /**
-   * Broadcast room state DTO to all sockets in room.
+   * Broadcast current room state to all clients in room.
    */
   broadcastRoomUpdate(code) {
     const room = this.rooms.get(code);
-    if (!room) return;
-
-    const dto = this.getRoomDTO(room);
-    this.io.to(code).emit('room_updated', dto);
+    if (room) {
+      RoomBroadcaster.broadcastRoomUpdate(this.io, room);
+    }
   }
 
   /**
-   * Broadcast individual sanitized game state to each player.
+   * Broadcast game specific state.
    */
   broadcastGameState(code) {
     const room = this.rooms.get(code);
-    if (!room || !room.gameInstance) return;
-
-    for (const [socketId, player] of room.players) {
-      const socket = this.io.sockets.sockets.get(socketId);
-      if (socket) {
-        const playerState = room.gameInstance.getPlayerState(socketId, player, room);
-        socket.emit('game_state_updated', playerState);
-      }
+    if (room) {
+      RoomBroadcaster.broadcastGameState(this.io, room);
     }
   }
 
   /**
-   * Broadcast a game event to room.
+   * Broadcast game specific events.
    */
   broadcastGameEvent(code, event, data) {
-    if (event === 'play_boo_sound_targeted' && data && Array.isArray(data.targetSockets)) {
-      data.targetSockets.forEach(sId => {
-        const socket = this.io.sockets.sockets.get(sId);
-        if (socket) socket.emit('play_boo_sound');
-      });
-      return;
+    const room = this.rooms.get(code);
+    if (room) {
+      RoomBroadcaster.broadcastGameEvent(this.io, room, event, data);
     }
-    this.io.to(code).emit(event, data);
   }
 
   /**
    * Sanitize room object into a DTO.
    */
   getRoomDTO(room) {
-    return {
-      code: room.code,
-      hostId: room.hostId,
-      gameId: room.gameId,
-      gameState: room.gameState,
-      settings: room.settings,
-      players: Array.from(room.players.values()).map(p => ({
-        id: p.id,
-        name: p.name,
-        avatar: p.avatar,
-        isHost: p.isHost,
-        isReady: p.isReady,
-        team: p.team || 'red',
-        role: p.role || 'operative'
-      }))
-    };
+    return RoomBroadcaster.getRoomDTO(room);
   }
 }
 

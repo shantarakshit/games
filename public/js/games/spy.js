@@ -37,10 +37,15 @@ const SpyUI = {
     }
 
     if (timerText) {
-      const secs = state.timerSeconds !== undefined ? state.timerSeconds : 0;
-      const minsStr = Math.floor(secs / 60).toString().padStart(2, '0');
-      const secsStr = (secs % 60).toString().padStart(2, '0');
-      timerText.innerText = `${minsStr}:${secsStr}`;
+      const isUntimed = state.phase === 'discussion' && state.settings && Number(state.settings.timer) === 0;
+      if (isUntimed) {
+        timerText.innerText = '∞ (No Timer)';
+      } else {
+        const secs = state.timerSeconds !== undefined ? state.timerSeconds : 0;
+        const minsStr = Math.floor(secs / 60).toString().padStart(2, '0');
+        const secsStr = (secs % 60).toString().padStart(2, '0');
+        timerText.innerText = `${minsStr}:${secsStr}`;
+      }
     }
 
     // Secret Role Card (My Player)
@@ -48,16 +53,6 @@ const SpyUI = {
     const categoryBadge = document.getElementById('spyCategoryBadge');
     const locationTitle = document.getElementById('spyLocationTitle');
     const roleBadge = document.getElementById('spyRoleBadge');
-
-    // Your Role Header Text
-    const myRoleEl = document.getElementById('spyMyRoleText');
-    if (myRoleEl && state.myPlayer) {
-      if (state.isSpy) {
-        myRoleEl.innerHTML = `<span class="role-team-tag spy">🕵️ THE IMPOSTOR</span>`;
-      } else {
-        myRoleEl.innerHTML = `<span class="role-team-tag innocent">😇 INNOCENT</span>`;
-      }
-    }
 
     if (state.myPlayer) {
       if (categoryBadge) categoryBadge.innerText = `Category: ${state.category || 'Secret'}`;
@@ -100,17 +95,6 @@ const SpyUI = {
       }
     }
 
-    // Action Buttons: Imposter Guess Button (1 attempt per game)
-    const btnGuessLocation = document.getElementById('btnSpyGuessLocation');
-    if (btnGuessLocation) {
-      const canGuess = state.isSpy && !state.hasGuessed && !state.isEliminated && !state.winner;
-      if (canGuess) {
-        btnGuessLocation.classList.remove('hidden');
-      } else {
-        btnGuessLocation.classList.add('hidden');
-      }
-    }
-
     // Restart & Lobby Buttons: Host ONLY
     const btnSpyRestart = document.getElementById('btnSpyRestart');
     if (btnSpyRestart) {
@@ -142,12 +126,13 @@ const SpyUI = {
         } else {
           if (votingStatus) {
             votingStatus.innerText = state.hasVoted
-              ? '\u2714\ufe0f You have submitted your vote! Waiting for others...'
-              : 'Select a player below to cast your 1 vote:';
+              ? '✔️ Vote recorded! You can tap any other candidate to swap your vote anytime.'
+              : 'Select a player below to cast your vote:';
           }
 
           if (votingGrid && state.livingPlayers) {
             votingGrid.innerHTML = '';
+            const tallyMap = state.liveVoteTally || {};
 
             // "No Imposters Left" button — available once eliminatedCount >= totalSpies
             const eliminatedCount = state.eliminatedCount || 0;
@@ -158,42 +143,52 @@ const SpyUI = {
               const noImpVoteCount = state.noImpVoteCount || 0;
               const totalLiving = state.totalLivingPlayers || 1;
               const noImpCard = document.createElement('div');
-              noImpCard.className = `vote-card no-imp-card${myVoteIsNoImp ? ' my-vote-selected' : ''}`;
+              noImpCard.className = `vote-card no-imp-card ${myVoteIsNoImp ? 'my-vote-selected' : ''}`;
               noImpCard.innerHTML = `
-                <span class="player-avatar">\ud83c\udff3\ufe0f</span>
-                <span class="player-name">No Imposters Left<br><small class="vote-req-hint">Requires unanimous vote \xb7 ${noImpVoteCount}/${totalLiving}</small></span>
-                <button class="btn ${myVoteIsNoImp ? 'btn-secondary' : 'btn-success'} btn-xs" ${myVoteIsNoImp ? 'disabled' : ''} id="btnVoteNoImpostors">
-                  ${myVoteIsNoImp ? '\u2705 Voted' : '\ud83c\udff3\ufe0f End Game'}
+                <div class="no-imp-left">
+                  <span class="player-avatar">🏳️</span>
+                  <div class="no-imp-info">
+                    <span class="no-imp-title">No Imposters Left</span>
+                    <span class="vote-req-hint">Requires unanimous vote (${noImpVoteCount}/${totalLiving})</span>
+                  </div>
+                </div>
+                <button class="btn ${myVoteIsNoImp ? 'btn-success' : 'btn-secondary'} btn-sm no-imp-btn" id="btnVoteNoImpostors">
+                  ${myVoteIsNoImp ? '✅ Voted' : '🏳️ Vote'}
                 </button>
               `;
-              if (!myVoteIsNoImp) {
-                noImpCard.querySelector('button').onclick = () => {
+              noImpCard.onclick = () => {
+                if (!myVoteIsNoImp) {
                   SoundFX.playChime();
                   socket.emit('game_action', { action: 'submit_vote', targetId: 'NO_IMPOSTERS' });
-                };
-              }
+                }
+              };
               votingGrid.appendChild(noImpCard);
             }
 
             state.livingPlayers.forEach(p => {
               if (p.id === ClientState.myPlayerId) return; // Cannot vote for self
 
+              const isMyVote = state.myVote === p.id;
+              const candidateVotes = tallyMap[p.id] || 0;
+
               const voteCard = document.createElement('div');
-              voteCard.className = 'vote-card';
+              voteCard.className = `vote-card ${isMyVote ? 'my-vote-selected' : ''}`;
               voteCard.innerHTML = `
                 <span class="player-avatar">${p.avatar}</span>
                 <span class="player-name">${p.name}</span>
-                <button class="btn ${state.hasVoted ? 'btn-secondary' : 'btn-danger'} btn-xs" ${state.hasVoted ? 'disabled' : ''}>
-                  ${state.hasVoted ? 'Voted' : '\ud83d\uddf3\ufe0f Vote'}
+                ${candidateVotes > 0 ? `<span class="live-vote-badge">🗳️ ${candidateVotes} vote${candidateVotes > 1 ? 's' : ''}</span>` : ''}
+                <button class="btn ${isMyVote ? 'btn-success' : (state.hasVoted ? 'btn-secondary' : 'btn-danger')} btn-xs">
+                  ${isMyVote ? '✅ Voted' : (state.hasVoted ? '🔄 Swap' : '🗳️ Vote')}
                 </button>
               `;
 
-              if (!state.hasVoted) {
-                voteCard.querySelector('button').onclick = () => {
+              voteCard.onclick = () => {
+                if (!isMyVote) {
                   SoundFX.playChime();
                   socket.emit('game_action', { action: 'submit_vote', targetId: p.id });
-                };
-              }
+                }
+              };
+
               votingGrid.appendChild(voteCard);
             });
           }
@@ -259,9 +254,32 @@ const SpyUI = {
 
     // Host Timer Controls (discussion or voting phase only)
     const timerControls = document.getElementById('spyHostTimerControls');
+    const btnStartVote = document.getElementById('btnSpyStartVote');
+    const btnAdd30 = document.getElementById('btnSpyTimerAdd30');
+    const btnSkipTo1 = document.getElementById('btnSpyTimerSkipTo1');
+
     if (timerControls) {
+      const isUntimed = state.phase === 'discussion' && state.settings && Number(state.settings.timer) === 0;
       const showControls = ClientState.isHost && (state.phase === 'discussion' || state.phase === 'voting') && !state.winner;
       timerControls.classList.toggle('hidden', !showControls);
+
+      if (showControls) {
+        if (state.phase === 'discussion') {
+          if (isUntimed) {
+            if (btnStartVote) btnStartVote.classList.remove('hidden');
+            if (btnAdd30) btnAdd30.classList.add('hidden');
+            if (btnSkipTo1) btnSkipTo1.classList.add('hidden');
+          } else {
+            if (btnStartVote) btnStartVote.classList.add('hidden');
+            if (btnAdd30) btnAdd30.classList.remove('hidden');
+            if (btnSkipTo1) btnSkipTo1.classList.remove('hidden');
+          }
+        } else if (state.phase === 'voting') {
+          if (btnStartVote) btnStartVote.classList.add('hidden');
+          if (btnAdd30) btnAdd30.classList.remove('hidden');
+          if (btnSkipTo1) btnSkipTo1.classList.remove('hidden');
+        }
+      }
     }
   },
 
@@ -270,25 +288,6 @@ const SpyUI = {
     const secretCard = document.getElementById('spySecretCard');
     if (secretCard) {
       secretCard.addEventListener('pointerdown', () => SoundFX.playCardFlip());
-    }
-
-    // Open Spy Location Guess Modal
-    const btnGuess = document.getElementById('btnSpyGuessLocation');
-    if (btnGuess) {
-      btnGuess.onclick = () => {
-        SoundFX.playClick();
-        const modal = document.getElementById('modalSpyGuess');
-        if (modal) modal.classList.remove('hidden');
-      };
-    }
-
-    const btnCloseGuess = document.getElementById('btnCloseSpyGuess');
-    if (btnCloseGuess) {
-      btnCloseGuess.onclick = () => {
-        SoundFX.playClick();
-        const modal = document.getElementById('modalSpyGuess');
-        if (modal) modal.classList.add('hidden');
-      };
     }
 
     // Cover-Typing Phase Input Listeners
@@ -354,32 +353,6 @@ const SpyUI = {
       });
     }
 
-    // Submit typed text guess
-    const btnSubmitText = document.getElementById('btnSubmitSpyGuessText');
-    const inputText = document.getElementById('inputSpyGuessText');
-    const submitTypedGuess = () => {
-      SoundFX.playClick();
-      const word = inputText ? inputText.value.trim() : '';
-      if (word) {
-        socket.emit('game_action', { action: 'spy_guess_location', location: word });
-        if (inputText) inputText.value = '';
-        const modal = document.getElementById('modalSpyGuess');
-        if (modal) modal.classList.add('hidden');
-      }
-    };
-
-    if (btnSubmitText) {
-      btnSubmitText.onclick = submitTypedGuess;
-    }
-    if (inputText) {
-      inputText.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          submitTypedGuess();
-        }
-      });
-    }
-
     // Restart Game with Custom In-Game Modal (Host ONLY)
     const btnRestart = document.getElementById('btnSpyRestart');
     if (btnRestart) {
@@ -406,9 +379,18 @@ const SpyUI = {
       };
     }
 
-    // Host Timer Controls
+    // Host Timer & Voting Controls
+    const btnStartVote = document.getElementById('btnSpyStartVote');
     const btnAdd30 = document.getElementById('btnSpyTimerAdd30');
     const btnSkipTo1 = document.getElementById('btnSpyTimerSkipTo1');
+
+    if (btnStartVote) {
+      btnStartVote.onclick = () => {
+        if (!ClientState.isHost) return;
+        SoundFX.playClick();
+        socket.emit('game_action', { action: 'host_start_voting' });
+      };
+    }
     if (btnAdd30) {
       btnAdd30.onclick = () => {
         if (!ClientState.isHost) return;
@@ -420,7 +402,7 @@ const SpyUI = {
       btnSkipTo1.onclick = () => {
         if (!ClientState.isHost) return;
         SoundFX.playClick();
-        socket.emit('game_action', { action: 'adjust_timer', set: 1 });
+        socket.emit('game_action', { action: 'adjust_timer', set: 0 });
       };
     }
 

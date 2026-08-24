@@ -1,0 +1,338 @@
+/* ==========================================================================
+   PARTY GAMES HUB - IMPOSTER / SPY GAME STYLES
+   ========================================================================== */
+
+/* Secret Peek Card */
+.secret-card-container {
+  perspective: 1000px;
+  margin: 10px 0;
+}
+
+.secret-card {
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9));
+  border: 2px dashed var(--accent-indigo);
+  transition: all 0.3s ease;
+}
+
+.secret-card:active .secret-card-front {
+  display: none;
+}
+
+.secret-card:active .secret-card-back {
+  display: flex;
+}
+
+.secret-card-back {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.secret-location {
+  font-family: var(--font-heading);
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--accent-cyan);
+}
+
+.category-badge {
+  background: rgba(99, 102, 241, 0.2);
+  color: var(--accent-indigo);
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.role-badge {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  padding: 6px 14px;
+  border-radius: 14px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+/* 20-Second Cover Typing Panel */
+.typing-panel {
+  margin: 12px 0;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.12));
+  border: 1.5px solid rgba(168, 85, 247, 0.4);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.2);
+}
+
+.typing-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.typing-header h3 {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #e0e7ff;
+  margin: 0;
+}
+
+.typing-timer-badge {
+  background: rgba(245, 158, 11, 0.25);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  color: #fbbf24;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+
+/* Phase Badges */
+.phase-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+  margin-right: 8px;
+}
+
+.discussion-badge {
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.4);
+}
+
+.voting-badge {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  animation: pulse 1.5s infinite;
+}
+
+.tally-badge {
+  background: rgba(6, 182, 212, 0.2);
+  color: #22d3ee;
+  border: 1px solid rgba(6, 182, 212, 0.4);
+}
+
+.winner-badge {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+/* Big Timer */
+#spyTimerDisplay {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+#spyTimerText {
+  font-size: 2.2rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: #f0fdf4;
+  text-shadow: 0 0 12px rgba(74, 222, 128, 0.5);
+  letter-spacing: 2px;
+}
+
+.host-timer-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Voting Grid & Cards */
+.voting-panel, .tally-panel {
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.voting-status-text {
+  font-size: 0.85rem;
+  color: #fbbf24;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.voting-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.vote-card {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.vote-card:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.vote-card.my-vote-selected {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.15);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.25);
+}
+
+.vote-card.no-imp-card {
+  grid-column: 1 / -1;
+  border: 2px solid rgba(34, 197, 94, 0.5);
+  background: rgba(34, 197, 94, 0.1);
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  gap: 14px;
+  text-align: left;
+  margin-bottom: 4px;
+}
+
+.vote-card.no-imp-card.my-vote-selected {
+  border-color: rgba(34, 197, 94, 0.9);
+  background: rgba(34, 197, 94, 0.22);
+}
+
+.no-imp-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.no-imp-left .player-avatar {
+  font-size: 1.4rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.no-imp-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.no-imp-title {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.vote-card.no-imp-card .vote-req-hint {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+}
+
+.no-imp-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding: 6px 14px;
+  font-weight: 700;
+}
+
+.live-vote-badge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #fde68a;
+  background: rgba(245, 158, 11, 0.25);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.vote-req-hint {
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 500;
+}
+
+/* Spectator Mode */
+.spectator-badge {
+  display: inline-block;
+  background: rgba(250, 204, 21, 0.18);
+  color: #fbbf24;
+  border: 1px solid rgba(250, 204, 21, 0.35);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  margin-right: 6px;
+}
+
+.spectator-waiting-msg {
+  text-align: center;
+  padding: 20px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+/* Tally Results */
+.tally-banner {
+  background: rgba(0, 0, 0, 0.4);
+  border-left: 4px solid var(--accent-cyan);
+  padding: 10px 14px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--color-text);
+  margin-bottom: 12px;
+  border-radius: 4px;
+}
+
+.tally-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+.tally-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tally-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.vote-count-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent-amber);
+}

@@ -1,0 +1,35 @@
+/* ==========================================================================
+   PARTY GAMES HUB - CSS VARIABLES & DESIGN TOKENS
+   ========================================================================== */
+
+:root {
+  --bg-primary: #0b0f19;
+  --bg-secondary: #111827;
+  --panel-bg: rgba(255, 255, 255, 0.05);
+  --panel-border: rgba(255, 255, 255, 0.12);
+  --panel-glow: rgba(99, 102, 241, 0.15);
+  
+  --color-text: #f9fafb;
+  --color-text-muted: #9ca3af;
+  
+  --accent-indigo: #6366f1;
+  --accent-cyan: #06b6d4;
+  --accent-pink: #ec4899;
+  --accent-emerald: #10b981;
+  --accent-amber: #f59e0b;
+  --accent-rose: #f43f5e;
+  
+  --team-red: #ef4444;
+  --team-red-bg: rgba(239, 68, 68, 0.2);
+  --team-blue: #3b82f6;
+  --team-blue-bg: rgba(59, 130, 246, 0.2);
+  --card-neutral: #6b7280;
+  --card-neutral-bg: rgba(107, 114, 128, 0.2);
+  --card-assassin: #18181b;
+  
+  --font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-heading: 'Outfit', sans-serif;
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+}

@@ -40,9 +40,10 @@ const CodenamesUI = {
       if (turnText) turnText.innerText = `${teamEmoji} ${state.currentTurn.toUpperCase()} ${phaseText}`;
       if (turnBanner) turnBanner.className = `turn-banner ${state.currentTurn || 'red'}-bg`;
 
-      // Turn Timer Display - Visible to ALL players during active game
+      // Turn Timer Display - Visible to ALL players during active game when timer is enabled
       if (timerContainer) {
-        if (!state.winner) {
+        const hasTimer = state.settings && Number(state.settings.timerPerTurn) > 0;
+        if (!state.winner && hasTimer) {
           timerContainer.classList.remove('hidden');
           const secs = (state.timerSeconds !== undefined && state.timerSeconds !== null) ? state.timerSeconds : 120;
           const minsStr = Math.floor(secs / 60).toString().padStart(2, '0');
@@ -54,29 +55,13 @@ const CodenamesUI = {
       }
     }
 
-    // Role Status Text & Spymaster Slot Lock Button
+    // Role Status Text
     const roleText = document.getElementById('cnMyRoleText');
-    const btnClaimSpymaster = document.getElementById('btnClaimSpymaster');
     const btnCNRestart = document.getElementById('btnCNRestart');
 
     if (roleText) {
       const teamClass = (myTeam === 'red') ? 'red' : 'blue';
       roleText.innerHTML = `<span class="role-team-tag ${teamClass}">${(myTeam || 'red').toUpperCase()}</span> ${(myRole || 'operative').toUpperCase()}`;
-    }
-
-    // Claim Spymaster Button State
-    if (btnClaimSpymaster) {
-      const isClaimed = myTeam === 'red' ? state.redSpymasterClaimed : state.blueSpymasterClaimed;
-      if (myRole === 'spymaster') {
-        btnClaimSpymaster.innerText = '🔒 You are Spymaster';
-        btnClaimSpymaster.disabled = true;
-      } else if (isClaimed) {
-        btnClaimSpymaster.innerText = '🔒 Spymaster Locked';
-        btnClaimSpymaster.disabled = true;
-      } else {
-        btnClaimSpymaster.innerText = '🕵️ Claim Spymaster';
-        btnClaimSpymaster.disabled = false;
-      }
     }
 
     // Restart Button Restriction: Host ONLY
@@ -99,7 +84,7 @@ const CodenamesUI = {
     const clueGiven = document.getElementById('cnClueGiven');
     const clueInputForm = document.getElementById('cnClueInputContainer');
     const clueDisplay = document.getElementById('cnClueDisplay');
-    const btnEndTurn = document.getElementById('cnCNEndTurn');
+    const btnEndTurn = document.getElementById('btnCNEndTurn');
 
     if (state.currentClue) {
       if (clueWord) clueWord.innerText = state.currentClue.word;
@@ -273,15 +258,6 @@ const CodenamesUI = {
   },
 
   setupListeners() {
-    // Claim Spymaster Position
-    const btnClaim = document.getElementById('btnClaimSpymaster');
-    if (btnClaim) {
-      btnClaim.onclick = () => {
-        SoundFX.playClick();
-        socket.emit('game_action', { action: 'claim_spymaster' });
-      };
-    }
-
     // Submit Clue
     const btnSubmit = document.getElementById('btnCNSubmitClue');
     if (btnSubmit) {

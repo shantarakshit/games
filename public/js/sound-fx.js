@@ -10,6 +10,9 @@ const SoundFX = {
         this.audioCtx = new AudioContext();
       }
     }
+    if (this.audioCtx && this.audioCtx.state === 'suspended') {
+      this.audioCtx.resume().catch(() => {});
+    }
   },
 
   toggleMute() {
@@ -379,3 +382,16 @@ const SoundFX = {
     osc.stop(now + 0.18);
   }
 };
+
+// Resume AudioContext on first user interaction across the window
+const resumeAudioOnGesture = () => {
+  if (SoundFX.audioCtx && SoundFX.audioCtx.state === 'suspended') {
+    SoundFX.audioCtx.resume().catch(() => {});
+  } else if (!SoundFX.audioCtx) {
+    SoundFX.init();
+  }
+};
+window.addEventListener('click', resumeAudioOnGesture, { once: true });
+window.addEventListener('touchstart', resumeAudioOnGesture, { once: true });
+window.addEventListener('keydown', resumeAudioOnGesture, { once: true });
+
