@@ -17,6 +17,13 @@
   margin-bottom: 16px;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .header-brand {
   display: flex;
   align-items: center;

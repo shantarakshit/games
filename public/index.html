@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   
   <!-- CSS Styles -->
-  <link rel="stylesheet" href="/css/style.css?v=2.5">
+  <link rel="stylesheet" href="/css/style.css?v=2.6">
 
   <!-- Socket.io Client Library -->
   <script src="/socket.io/socket.io.js"></script>
@@ -21,10 +21,12 @@
     
     <!-- Top Navigation Header -->
     <header class="app-header">
-      <div class="header-brand" id="btnHomeBrand">
-        <span class="brand-icon">🎮</span>
-        <span class="brand-title">Games Hub</span>
-        <div id="headerUserBadge" class="header-user-badge hidden">
+      <div class="header-left">
+        <div class="header-brand" id="btnHomeBrand">
+          <span class="brand-icon">🎮</span>
+          <span class="brand-title">Games Hub</span>
+        </div>
+        <div id="headerUserBadge" class="header-user-badge hidden" title="Tap to logout">
           <span id="headerAvatar">😎</span>
           <span id="headerPlayerName">Player</span>
           <span class="logout-hint">(logout)</span>
@@ -843,31 +845,31 @@
 
   <!-- Client JavaScript Modules -->
   <!-- 1. Core Services -->
-  <script src="/js/core/state.js?v=2.5"></script>
-  <script src="/js/sound-fx.js?v=2.5"></script>
-  <script src="/js/socket-client.js?v=2.5"></script>
-  <script src="/js/core/router.js?v=2.5"></script>
+  <script src="/js/core/state.js?v=2.6"></script>
+  <script src="/js/sound-fx.js?v=2.6"></script>
+  <script src="/js/socket-client.js?v=2.6"></script>
+  <script src="/js/core/router.js?v=2.6"></script>
 
   <!-- 2. Modals -->
-  <script src="/js/modals/confirmModal.js?v=2.5"></script>
-  <script src="/js/modals/pinAuthModal.js?v=2.5"></script>
-  <script src="/js/modals/rulesModal.js?v=2.5"></script>
-  <script src="/js/modals/settingsModal.js?v=2.5"></script>
-  <script src="/js/modals/shareModal.js?v=2.5"></script>
+  <script src="/js/modals/confirmModal.js?v=2.6"></script>
+  <script src="/js/modals/pinAuthModal.js?v=2.6"></script>
+  <script src="/js/modals/rulesModal.js?v=2.6"></script>
+  <script src="/js/modals/settingsModal.js?v=2.6"></script>
+  <script src="/js/modals/shareModal.js?v=2.6"></script>
 
   <!-- 3. Lobby UI -->
-  <script src="/js/lobby/lobbyUI.js?v=2.5"></script>
+  <script src="/js/lobby/lobbyUI.js?v=2.6"></script>
 
   <!-- 4. Games -->
-  <script src="/js/games/codenames.js?v=2.5"></script>
-  <script src="/js/games/spy.js?v=2.5"></script>
-  <script src="/js/games/mafia/mafiaHostPanel.js?v=2.5"></script>
-  <script src="/js/games/mafia/mafiaNightActions.js?v=2.5"></script>
-  <script src="/js/games/mafia/mafiaDayVoting.js?v=2.5"></script>
-  <script src="/js/games/mafia/mafiaTimeline.js?v=2.5"></script>
-  <script src="/js/games/mafia/mafia.js?v=2.5"></script>
+  <script src="/js/games/codenames.js?v=2.6"></script>
+  <script src="/js/games/spy.js?v=2.6"></script>
+  <script src="/js/games/mafia/mafiaHostPanel.js?v=2.6"></script>
+  <script src="/js/games/mafia/mafiaNightActions.js?v=2.6"></script>
+  <script src="/js/games/mafia/mafiaDayVoting.js?v=2.6"></script>
+  <script src="/js/games/mafia/mafiaTimeline.js?v=2.6"></script>
+  <script src="/js/games/mafia/mafia.js?v=2.6"></script>
 
   <!-- 5. Main App Orchestrator -->
-  <script src="/js/hub.js?v=2.5"></script>
+  <script src="/js/hub.js?v=2.6"></script>
 </body>
 </html>

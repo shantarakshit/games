@@ -100,7 +100,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (userBadgeEl) {
     userBadgeEl.style.cursor = 'pointer';
     userBadgeEl.title = 'Tap to logout';
-    userBadgeEl.onclick = () => {
+    userBadgeEl.onclick = (e) => {
+      if (e) e.stopPropagation();
       SoundFX.playClick();
       socket.emit('leave_room', () => {
         ClientState.roomCode = null;
@@ -110,15 +111,19 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => {
         ClientState.roomCode = null;
         showView('viewHome');
-      }, 300);
+      }, 200);
     };
   }
 
-  // Brand Logo Click: Open Game Rules Modal
+  // Brand Logo Click
   if (btnHomeBrand) {
-    btnHomeBrand.onclick = () => {
+    btnHomeBrand.onclick = (e) => {
+      if (e) e.stopPropagation();
       SoundFX.playClick();
-      openRulesModal('codenames');
+      // If currently on home or lobby, stay or return to home
+      if (ClientState.currentView === 'viewLobby' || ClientState.currentView === 'viewHome') {
+        showView('viewHome');
+      }
     };
   }
 
