@@ -42,6 +42,7 @@ class SpyInstance {
     this.eliminatedPlayers = new Set(); // socketIds of eliminated/ousted players
     this.camouflageWords = new Map(); // socketId -> 8-12 letter word
     this.completedCamouflage = new Set(); // socketIds of innocents who finished camouflage typing
+    this.starterPlayerId = null; // socketId of the player chosen to ask first question
 
     this.tallyData = [];
     this.tallyResultText = '';
@@ -84,6 +85,7 @@ class SpyInstance {
     this.eliminatedPlayers.clear();
     this.camouflageWords.clear();
     this.completedCamouflage.clear();
+    this.starterPlayerId = null;
     this.tallyData = [];
     this.tallyResultText = '';
     this.winner = null;
@@ -104,7 +106,22 @@ class SpyInstance {
     const duration = (this.settings.timer !== undefined && this.settings.timer !== null) ? Number(this.settings.timer) : 180;
     this.timerSeconds = isNaN(duration) ? 180 : duration;
     this.votes.clear();
-    this.log.push({ type: 'system', text: '💬 Discussion phase started! Ask questions to find the Imposter.' });
+
+    // Randomly choose a living player (spy or non-spy) to start the discussion
+    const livingPlayers = Array.from(this.room.players.keys()).filter(id => !this.eliminatedPlayers.has(id));
+    if (livingPlayers.length > 0) {
+      this.starterPlayerId = livingPlayers[Math.floor(Math.random() * livingPlayers.length)];
+      const starterPlayer = this.room.players.get(this.starterPlayerId);
+      const starterName = starterPlayer ? starterPlayer.name : 'A player';
+      this.log.push({
+        type: 'system',
+        text: `💬 Discussion phase started! 🎤 ${starterName} was chosen to start the discussion.`
+      });
+    } else {
+      this.starterPlayerId = null;
+      this.log.push({ type: 'system', text: '💬 Discussion phase started! Ask questions to find the Imposter.' });
+    }
+
     if (this.timerSeconds > 0) {
       this.startTimer();
     } else {
@@ -148,10 +165,16 @@ class SpyInstance {
   startVotingPhase() {
     this.stopTimer();
     this.phase = 'voting';
-    this.timerSeconds = 60; // 1 min voting time
+    const isUntimed = this.settings && Number(this.settings.timer) === 0;
+    this.timerSeconds = isUntimed ? 0 : 60; // Untimed or 1 min voting time
     this.votes.clear();
-    this.log.push({ type: 'warning', text: '🗳️ 1-minute voting phase initiated. Cast your vote!' });
-    this.startTimer();
+    if (this.timerSeconds > 0) {
+      this.log.push({ type: 'warning', text: '🗳️ 1-minute voting phase initiated. Cast your vote!' });
+      this.startTimer();
+    } else {
+      this.timerSeconds = 0;
+      this.log.push({ type: 'warning', text: '🗳️ Voting phase open (No Timer). Cast your vote!' });
+    }
     this.emitEvent('game_state_updated');
   }
 
@@ -373,12 +396,8 @@ class SpyInstance {
             }
           }
 
-          // Start tally when everyone has voted
-          if (this.votes.size >= livingPlayers.length) {
-            this.startTallyPhase();
-          } else {
-            this.emitEvent('game_state_updated');
-          }
+          // Do not auto-advance when everyone has voted; only advance on timer expiration or host action
+          this.emitEvent('game_state_updated');
         }
         break;
 
@@ -531,6 +550,10 @@ class SpyInstance {
       this.completedCamouflage.delete(oldSocketId);
       this.completedCamouflage.add(newSocketId);
     }
+
+    if (this.starterPlayerId === oldSocketId) {
+      this.starterPlayerId = newSocketId;
+    }
   }
 
   getPlayerState(socketId, player, room) {
@@ -560,6 +583,13 @@ class SpyInstance {
       liveVoteTally[targetId] = (liveVoteTally[targetId] || 0) + 1;
     }
 
+    const starterPlayerObj = this.starterPlayerId ? room.players.get(this.starterPlayerId) : null;
+    const starterPlayer = starterPlayerObj ? {
+      id: starterPlayerObj.id,
+      name: starterPlayerObj.name,
+      avatar: starterPlayerObj.avatar || '😎'
+    } : null;
+
     return {
       gameId: 'spy',
       category: displayCategory,
@@ -567,6 +597,9 @@ class SpyInstance {
       role: roleInfo.role,
       isSpy,
       isEliminated,
+      starterPlayerId: this.starterPlayerId,
+      starterPlayer,
+      isStarter: this.starterPlayerId === socketId,
       hasVoted: this.votes.has(socketId),
       myVote: this.votes.get(socketId) || null,
       liveVoteTally,

@@ -51,6 +51,35 @@ const MafiaUI = {
         socket.emit('game_action', { action: 'adjust_timer', set: 0 });
       };
     }
+
+    // Secret Peek Role Card (Safari & Mobile Cross-Platform Support)
+    const secretCard = document.getElementById('mafiaSecretCard');
+    if (secretCard) {
+      const showPeek = (e) => {
+        if (e && e.cancelable && e.type === 'touchstart') e.preventDefault();
+        secretCard.classList.add('is-peeking');
+        SoundFX.playCardFlip();
+      };
+      const hidePeek = () => {
+        secretCard.classList.remove('is-peeking');
+      };
+
+      secretCard.addEventListener('pointerdown', showPeek);
+      secretCard.addEventListener('pointerup', hidePeek);
+      secretCard.addEventListener('pointerleave', hidePeek);
+      secretCard.addEventListener('pointercancel', hidePeek);
+
+      secretCard.addEventListener('touchstart', showPeek, { passive: false });
+      secretCard.addEventListener('touchend', hidePeek);
+      secretCard.addEventListener('touchcancel', hidePeek);
+
+      secretCard.addEventListener('click', () => {
+        if (!secretCard.classList.contains('is-peeking')) {
+          secretCard.classList.toggle('is-peeking');
+          SoundFX.playCardFlip();
+        }
+      });
+    }
   },
 
   render(state) {
@@ -137,11 +166,12 @@ const MafiaUI = {
     }
 
     if (timerContainer && timerText) {
+      const discIsUntimed = state.settings && Number(state.settings.discussionTimer) === 0;
       let isTimed = false;
       if (state.phase === 'day_discussion') {
-        isTimed = state.settings && Number(state.settings.discussionTimer) > 0;
+        isTimed = !discIsUntimed;
       } else if (state.phase === 'day_voting') {
-        isTimed = state.settings && Number(state.settings.votingTimer) > 0;
+        isTimed = !discIsUntimed && state.settings && Number(state.settings.votingTimer) > 0;
       }
 
       const showTimer = (state.phase === 'day_discussion' || state.phase === 'day_voting') && !state.winner;
@@ -161,11 +191,12 @@ const MafiaUI = {
     // Host Timer Quick Controls in Header
     const hostTimerControls = document.getElementById('mafiaHostTimerControls');
     if (hostTimerControls) {
+      const discIsUntimed = state.settings && Number(state.settings.discussionTimer) === 0;
       let isTimed = false;
       if (state.phase === 'day_discussion') {
-        isTimed = state.settings && Number(state.settings.discussionTimer) > 0;
+        isTimed = !discIsUntimed;
       } else if (state.phase === 'day_voting') {
-        isTimed = state.settings && Number(state.settings.votingTimer) > 0;
+        isTimed = !discIsUntimed && state.settings && Number(state.settings.votingTimer) > 0;
       }
       const canControl = state.isHost && (state.phase === 'day_discussion' || state.phase === 'day_voting') && !state.winner && isTimed;
       hostTimerControls.classList.toggle('hidden', !canControl);

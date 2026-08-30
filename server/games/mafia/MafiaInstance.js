@@ -285,13 +285,7 @@ class MafiaInstance {
           ) {
             this.dayVotes.set(socketId, targetId);
           }
-          // Only auto-advance immediately if no timer is configured (timerSeconds === 0)
-          if (this.timerSeconds <= 0) {
-            const livingVoters = this.getLivingPlayerIds().filter(id => id !== this.hostSocketId);
-            if (this.dayVotes.size >= livingVoters.length) {
-              this.startDayPhase7();
-            }
-          }
+          // Do not auto-advance when all players have voted; only advance when timer runs out or host advances
         }
         break;
 

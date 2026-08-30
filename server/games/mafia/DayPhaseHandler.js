@@ -96,10 +96,12 @@ class DayPhaseHandler {
     instance.stopTimer();
     instance.phase = 'day_voting';
     instance.dayVotes.clear();
-    const voteDuration = (instance.settings.votingTimer !== undefined && instance.settings.votingTimer !== null)
+    const discIsUntimed = instance.settings && Number(instance.settings.discussionTimer) === 0;
+    const rawVoteDuration = (instance.settings.votingTimer !== undefined && instance.settings.votingTimer !== null)
       ? Number(instance.settings.votingTimer)
       : 30;
-    instance.timerSeconds = isNaN(voteDuration) ? 30 : voteDuration;
+    const voteDuration = discIsUntimed ? 0 : (isNaN(rawVoteDuration) ? 30 : rawVoteDuration);
+    instance.timerSeconds = voteDuration;
 
     if (instance.timerSeconds > 0) {
       instance.log.push({

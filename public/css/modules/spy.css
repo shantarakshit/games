@@ -17,17 +17,29 @@
   text-align: center;
   cursor: pointer;
   user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
   background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9));
   border: 2px dashed var(--accent-indigo);
   transition: all 0.3s ease;
 }
 
-.secret-card:active .secret-card-front {
-  display: none;
+.secret-card,
+.secret-card * {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
-.secret-card:active .secret-card-back {
-  display: flex;
+.secret-card:active .secret-card-front,
+.secret-card.is-peeking .secret-card-front {
+  display: none !important;
+}
+
+.secret-card:active .secret-card-back,
+.secret-card.is-peeking .secret-card-back {
+  display: flex !important;
 }
 
 .secret-card-back {
@@ -336,3 +348,49 @@
   font-weight: 700;
   color: var(--accent-amber);
 }
+
+/* Discussion Starter Banner */
+.starter-banner {
+  background: rgba(99, 102, 241, 0.18);
+  border: 1px solid rgba(99, 102, 241, 0.45);
+  color: #e0e7ff;
+  padding: 12px 18px;
+  border-radius: 12px;
+  margin: 12px auto;
+  max-width: 600px;
+  text-align: center;
+  font-size: 0.98rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.starter-banner-me {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.28), rgba(217, 119, 6, 0.38));
+  border: 1px solid rgba(245, 158, 11, 0.65);
+  color: #fef3c7;
+  font-size: 1.02rem;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.3);
+}
+
+.roster-player-chip.is-starter {
+  border-color: #fbbf24;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
+}
+
+.speaker-tag {
+  background: #fbbf24;
+  color: #0f172a;
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+

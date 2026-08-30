@@ -4,6 +4,9 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Enable :active pseudo-class and responsive tapping on iOS Safari
+  document.addEventListener('touchstart', () => {}, { passive: true });
+
   // DOM Elements
   const inputPlayerName = document.getElementById('inputPlayerName');
   const selectAvatar = document.getElementById('selectAvatar');
@@ -39,6 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // 3. Initialize Sub-Modules
+  WakeLockManager.init();
+  SessionManager.init();
   PinAuthModal.init();
   RulesModal.init();
   SettingsModal.init(null);
@@ -103,6 +108,8 @@ document.addEventListener('DOMContentLoaded', () => {
     userBadgeEl.onclick = (e) => {
       if (e) e.stopPropagation();
       SoundFX.playClick();
+      if (typeof SessionManager !== 'undefined') SessionManager.clearSession();
+      if (typeof WakeLockManager !== 'undefined') WakeLockManager.releaseLock();
       socket.emit('leave_room', () => {
         ClientState.roomCode = null;
         localStorage.removeItem('party_last_pin');
@@ -157,6 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ClientState.isHost = room.hostId === socket.id;
 
     if (room.gameState === 'lobby') {
+      if (typeof WakeLockManager !== 'undefined') WakeLockManager.releaseLock();
       LobbyUI.render(room);
       showView('viewLobby');
     }
@@ -165,6 +173,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Kicked From Room
   socket.on('kicked_from_room', (data) => {
     ClientState.roomCode = null;
+    if (typeof SessionManager !== 'undefined') SessionManager.clearSession();
+    if (typeof WakeLockManager !== 'undefined') WakeLockManager.releaseLock();
     localStorage.removeItem('party_last_pin');
     showView('viewHome');
     if (typeof window.showCustomConfirm === 'function') {
@@ -175,6 +185,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Server Reset
   socket.on('server_reset', (data) => {
     ClientState.roomCode = null;
+    if (typeof SessionManager !== 'undefined') SessionManager.clearSession();
+    if (typeof WakeLockManager !== 'undefined') WakeLockManager.releaseLock();
     localStorage.removeItem('party_last_pin');
     showView('viewHome');
     if (typeof window.showCustomConfirm === 'function') {
@@ -218,6 +230,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Game State Updated
   socket.on('game_state_updated', (gameState) => {
     ClientState.currentGame = gameState;
+
+    if (gameState.winner) {
+      if (typeof WakeLockManager !== 'undefined') WakeLockManager.releaseLock();
+    } else {
+      if (typeof WakeLockManager !== 'undefined') WakeLockManager.requestLock();
+    }
 
     if (gameState.gameId === 'codenames') {
       showView('viewCodenames');

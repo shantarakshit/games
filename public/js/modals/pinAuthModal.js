@@ -117,6 +117,9 @@ const PinAuthModal = {
     }, (res) => {
       if (res && res.success) {
         localStorage.setItem('party_last_pin', rawPin);
+        if (typeof SessionManager !== 'undefined') {
+          SessionManager.saveSession(res.room.code, playerName, avatar, rawPin);
+        }
         this.handleSuccessfulAuth(res);
       } else if (res && res.errorCode === 'INVALID_PIN') {
         if (pinAuthError) {
@@ -136,6 +139,9 @@ const PinAuthModal = {
         }, (cRes) => {
           if (cRes && cRes.success) {
             localStorage.setItem('party_last_pin', rawPin);
+            if (typeof SessionManager !== 'undefined') {
+              SessionManager.saveSession(cRes.roomCode, playerName, avatar, rawPin);
+            }
             if (modalPinAuth) modalPinAuth.classList.add('hidden');
             ClientState.roomCode = cRes.roomCode;
             ClientState.isHost = true;

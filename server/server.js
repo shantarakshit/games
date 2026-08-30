@@ -19,7 +19,7 @@ const io = new Server(server, {
     origin: '*',
     methods: ['GET', 'POST']
   },
-  pingInterval: 25000,
+  pingInterval: 10000,
   pingTimeout: 60000
 });
 

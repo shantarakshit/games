@@ -1,4 +1,4 @@
-const { LOBBY_AWAY_UI_MS, USER_DATA_CLEANUP_MS } = require('../config');
+const { LOBBY_AWAY_UI_MS, USER_DATA_CLEANUP_MS, MIDGAME_DISCONNECT_GRACE_MS } = require('../config');
 const RoomBroadcaster = require('./RoomBroadcaster');
 
 /**
@@ -258,25 +258,26 @@ class PlayerManager {
       // Broadcast update immediately so player has Away badge in 0-2m
       roomManager.broadcastRoomUpdate(code);
     } else {
-      // Disconnect mid-game: player can reconnect within 5 minutes
+      // Disconnect mid-game: player can seamlessly reconnect at any time during match (15 min grace)
       player.connected = false;
       player.isAway = true;
-      console.log(`🔌 Player Disconnected Mid-Game: ${playerName} (Can reconnect and claim spot within 5 min)`);
+      console.log(`🔌 Player Disconnected Mid-Game: ${playerName} (Can reconnect and claim spot within 15 min)`);
 
       if (player._cleanupTimer) clearTimeout(player._cleanupTimer);
+      const graceMs = MIDGAME_DISCONNECT_GRACE_MS || (15 * 60 * 1000);
       player._cleanupTimer = setTimeout(() => {
         if (!roomManager.rooms.has(code)) return;
         const currentRoom = roomManager.rooms.get(code);
         const currentPlayer = currentRoom.players.get(player.id);
         if (!currentPlayer || currentPlayer.connected !== false) return;
 
-        console.log(`🧹 5-Min Mid-Game Expiry: Clearing game data for ${playerName} in room [${code}]`);
+        console.log(`🧹 Mid-Game Expiry: Clearing game data for ${playerName} in room [${code}]`);
         currentRoom.players.delete(player.id);
         roomManager.broadcastRoomUpdate(code);
         if (currentRoom.gameState === 'playing') {
           roomManager.broadcastGameState(code);
         }
-      }, USER_DATA_CLEANUP_MS);
+      }, graceMs);
     }
   }
 }

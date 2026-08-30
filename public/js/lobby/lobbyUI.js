@@ -28,6 +28,9 @@ const LobbyUI = {
     if (btnLeaveRoom) {
       btnLeaveRoom.onclick = () => {
         SoundFX.playClick();
+        if (typeof SessionManager !== 'undefined') {
+          SessionManager.clearSession();
+        }
         socket.emit('leave_room', () => {
           ClientState.roomCode = null;
           showView('viewHome');

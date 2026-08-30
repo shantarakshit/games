@@ -37,7 +37,7 @@ const SpyUI = {
     }
 
     if (timerText) {
-      const isUntimed = state.phase === 'discussion' && state.settings && Number(state.settings.timer) === 0;
+      const isUntimed = (state.phase === 'discussion' || state.phase === 'voting') && state.settings && Number(state.settings.timer) === 0;
       if (isUntimed) {
         timerText.innerText = '∞ (No Timer)';
       } else {
@@ -64,6 +64,22 @@ const SpyUI = {
       } else {
         if (locationTitle) locationTitle.innerText = state.location || 'Secret Location';
         if (secretCardBack) secretCardBack.style.background = 'linear-gradient(135deg, #1e3a8a, #1d4ed8)';
+      }
+    }
+
+    // Discussion Starter Banner
+    const starterBanner = document.getElementById('spyStarterBanner');
+    if (starterBanner) {
+      const showStarter = state.phase === 'discussion' && !state.winner && state.starterPlayer;
+      starterBanner.classList.toggle('hidden', !showStarter);
+      if (showStarter) {
+        if (state.isStarter) {
+          starterBanner.className = 'starter-banner starter-banner-me glass-panel';
+          starterBanner.innerHTML = `<span>🎤</span> <div><strong>⭐ YOU were chosen to start the discussion!</strong></div>`;
+        } else {
+          starterBanner.className = 'starter-banner glass-panel';
+          starterBanner.innerHTML = `<span>🎤</span> <div><strong>${state.starterPlayer.avatar || '😎'} ${state.starterPlayer.name}</strong> was chosen to start the discussion!</div>`;
+        }
       }
     }
 
@@ -248,7 +264,10 @@ const SpyUI = {
     if (rosterListEl && state.players) {
       rosterListEl.innerHTML = state.players.map(p => {
         const deadTag = p.isAlive ? '' : ' <span class="eliminated-tag">❌</span>';
-        return `<div class="roster-player-chip${p.isAlive ? '' : ' eliminated'}">${p.avatar || '😎'} ${p.name}${deadTag}</div>`;
+        const isStarter = state.phase === 'discussion' && state.starterPlayerId === p.id && !state.winner;
+        const starterTag = isStarter ? ' <span class="speaker-tag">🎤 Starts Discussion</span>' : '';
+        const chipClass = `roster-player-chip${p.isAlive ? '' : ' eliminated'}${isStarter ? ' is-starter' : ''}`;
+        return `<div class="${chipClass}">${p.avatar || '😎'} ${p.name}${starterTag}${deadTag}</div>`;
       }).join('');
     }
 
@@ -259,35 +278,76 @@ const SpyUI = {
     const btnSkipTo1 = document.getElementById('btnSpyTimerSkipTo1');
 
     if (timerControls) {
-      const isUntimed = state.phase === 'discussion' && state.settings && Number(state.settings.timer) === 0;
+      const isUntimed = state.settings && Number(state.settings.timer) === 0;
       const showControls = ClientState.isHost && (state.phase === 'discussion' || state.phase === 'voting') && !state.winner;
       timerControls.classList.toggle('hidden', !showControls);
 
       if (showControls) {
         if (state.phase === 'discussion') {
           if (isUntimed) {
-            if (btnStartVote) btnStartVote.classList.remove('hidden');
+            if (btnStartVote) {
+              btnStartVote.classList.remove('hidden');
+              btnStartVote.innerText = '🗳️ Call Vote ➔';
+            }
             if (btnAdd30) btnAdd30.classList.add('hidden');
             if (btnSkipTo1) btnSkipTo1.classList.add('hidden');
           } else {
             if (btnStartVote) btnStartVote.classList.add('hidden');
             if (btnAdd30) btnAdd30.classList.remove('hidden');
-            if (btnSkipTo1) btnSkipTo1.classList.remove('hidden');
+            if (btnSkipTo1) {
+              btnSkipTo1.classList.remove('hidden');
+              btnSkipTo1.innerText = '⏭ Skip Timer';
+            }
           }
         } else if (state.phase === 'voting') {
-          if (btnStartVote) btnStartVote.classList.add('hidden');
-          if (btnAdd30) btnAdd30.classList.remove('hidden');
-          if (btnSkipTo1) btnSkipTo1.classList.remove('hidden');
+          if (isUntimed) {
+            if (btnStartVote) {
+              btnStartVote.classList.remove('hidden');
+              btnStartVote.innerText = '📊 End Vote & Tally ➔';
+            }
+            if (btnAdd30) btnAdd30.classList.add('hidden');
+            if (btnSkipTo1) btnSkipTo1.classList.add('hidden');
+          } else {
+            if (btnStartVote) btnStartVote.classList.add('hidden');
+            if (btnAdd30) btnAdd30.classList.remove('hidden');
+            if (btnSkipTo1) {
+              btnSkipTo1.classList.remove('hidden');
+              btnSkipTo1.innerText = '⏭ Skip Timer';
+            }
+          }
         }
       }
     }
   },
 
   setupListeners() {
-    // Peek Card Sound
+    // Peek Card Sound & Touch/Click support for Safari & mobile
     const secretCard = document.getElementById('spySecretCard');
     if (secretCard) {
-      secretCard.addEventListener('pointerdown', () => SoundFX.playCardFlip());
+      const showPeek = (e) => {
+        if (e && e.cancelable && e.type === 'touchstart') e.preventDefault();
+        secretCard.classList.add('is-peeking');
+        SoundFX.playCardFlip();
+      };
+      const hidePeek = () => {
+        secretCard.classList.remove('is-peeking');
+      };
+
+      secretCard.addEventListener('pointerdown', showPeek);
+      secretCard.addEventListener('pointerup', hidePeek);
+      secretCard.addEventListener('pointerleave', hidePeek);
+      secretCard.addEventListener('pointercancel', hidePeek);
+
+      secretCard.addEventListener('touchstart', showPeek, { passive: false });
+      secretCard.addEventListener('touchend', hidePeek);
+      secretCard.addEventListener('touchcancel', hidePeek);
+
+      secretCard.addEventListener('click', () => {
+        if (!secretCard.classList.contains('is-peeking')) {
+          secretCard.classList.toggle('is-peeking');
+          SoundFX.playCardFlip();
+        }
+      });
     }
 
     // Cover-Typing Phase Input Listeners
@@ -388,7 +448,7 @@ const SpyUI = {
       btnStartVote.onclick = () => {
         if (!ClientState.isHost) return;
         SoundFX.playClick();
-        socket.emit('game_action', { action: 'host_start_voting' });
+        socket.emit('game_action', { action: 'host_advance_phase' });
       };
     }
     if (btnAdd30) {
