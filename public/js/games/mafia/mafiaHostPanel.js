@@ -24,78 +24,98 @@ const MafiaHostPanel = {
 
     if (state.phase === 'role_reveal') {
       scriptText = `📢 <strong>SAY ALOUD:</strong> "Everyone look at your secret role. When ready, close your eyes. Round 1 is beginning!"`;
-      advanceText = `🌙 Begin Night 1 (Murderers Turn) ➔`;
+      advanceText = `🌙 Begin Night 1 (Everyone Selects) ➔`;
       advanceAction = 'host_start_round_1';
-    } else if (state.phase === 'night_murderers') {
-      scriptText = `📢 <strong>SAY ALOUD:</strong> "Everyone close your eyes. Murderers, wake up and select your victim on your phones."`;
-      const mData = state.murdererData;
-      if (mData && mData.hasConsensus) {
-        if (hostLiveStatusEl) hostLiveStatusEl.innerHTML = `<div class="host-status-card success">✅ Murderers agreed on victim: <strong>${mData.confirmedVictimName}</strong></div>`;
-      } else if (mData && mData.distinctTargets && mData.distinctTargets.length > 1) {
-        if (hostLiveStatusEl) hostLiveStatusEl.innerHTML = `<div class="host-status-card warning">⚠️ Murderers split vote! Waiting for consensus swap...</div>`;
-      } else {
-        if (hostLiveStatusEl) hostLiveStatusEl.innerHTML = `<div class="host-status-card info">⏳ Waiting for murderer(s) to pick target...</div>`;
-      }
-      advanceText = `💉 Advance to Doctor Phase ➔`;
-    } else if (state.phase === 'night_doctor') {
-      if (state.isDoctorAlive === false) {
-        scriptText = `📢 <strong>SAY ALOUD:</strong> "Murderers sleep. Doctor, wake up and select who to protect on your phone." <em style="color:#fde68a;">(Narrate a short pause to conceal their death from the group)</em>`;
-        if (hostLiveStatusEl) hostLiveStatusEl.innerHTML = `<div class="host-status-card warning">💉 Doctor is deceased (💀). Tap Next Phase ➔ when ready.</div>`;
-      } else {
-        scriptText = `📢 <strong>SAY ALOUD:</strong> "Murderers sleep. Doctor, wake up and select who to protect on your phone."`;
-        const dData = state.doctorData;
-        if (dData && dData.currentSavedId) {
-          const isMatch = state.murdererData && state.murdererData.confirmedVictimId === dData.currentSavedId;
-          if (hostLiveStatusEl) hostLiveStatusEl.innerHTML = `<div class="host-status-card ${isMatch ? 'success' : 'info'}">💉 Doctor protected: <strong>${dData.currentSavedName}</strong> ${isMatch ? '⭐ (MATCHES VICTIM - WILL SURVIVE!)' : ''}</div>`;
+    } else if (state.phase === 'night' || state.phase.startsWith('night_')) {
+      scriptText = `📢 <strong>SAY ALOUD:</strong> "Everyone close your eyes and open your phones. Make your secret night selections now!"`;
+      
+      const np = state.nightProgress;
+      if (hostLiveStatusEl) {
+        if (np) {
+          const mStatus = np.murderers.hasConsensus
+            ? `<span style="color:#34d399;">🎯 Confirmed (${np.murderers.confirmedVictimName})</span>`
+            : (np.murderers.submitted > 0 ? `<span style="color:#fbbf24;">⚠️ Split / In Progress (${np.murderers.submitted}/${np.murderers.total})</span>` : `<span style="color:#94a3b8;">⏳ Picking (${np.murderers.submitted}/${np.murderers.total})</span>`);
+
+          const docStatus = !np.doctor.isAlive
+            ? `<span style="color:#94a3b8;">💀 Deceased</span>`
+            : (np.doctor.submitted ? `<span style="color:#34d399;">🛡️ Protected (${np.doctor.savedName})</span>` : `<span style="color:#94a3b8;">⏳ Choosing...</span>`);
+
+          const detStatus = !np.detective.isAlive
+            ? `<span style="color:#94a3b8;">💀 Deceased</span>`
+            : (np.detective.submitted ? `<span style="color:#818cf8;">🔍 Investigated ${np.detective.inquiry?.suspectName || ''}</span>` : `<span style="color:#94a3b8;">⏳ Choosing...</span>`);
+
+          const civStatus = `<span style="color:#38bdf8;">⭐ ${np.civilians.submitted}/${np.civilians.total} Selected</span>`;
+
+          const allReady = np.allSubmitted;
+
+          hostLiveStatusEl.innerHTML = `
+            <div class="host-status-card ${allReady ? 'success' : 'info'}">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <strong>🌙 Night Selections Progress:</strong>
+                <span class="badge-pill ${allReady ? 'success-pill' : 'info-pill'}">${np.submittedCount} / ${np.totalLivingCount} Ready</span>
+              </div>
+              <div class="host-night-roles-status-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:6px; font-size:0.8rem;">
+                <div style="background:rgba(0,0,0,0.25); padding:4px 8px; border-radius:6px;">🔪 <strong>Mafia:</strong> ${mStatus}</div>
+                <div style="background:rgba(0,0,0,0.25); padding:4px 8px; border-radius:6px;">💉 <strong>Doctor:</strong> ${docStatus}</div>
+                <div style="background:rgba(0,0,0,0.25); padding:4px 8px; border-radius:6px;">🔍 <strong>Detective:</strong> ${detStatus}</div>
+                <div style="background:rgba(0,0,0,0.25); padding:4px 8px; border-radius:6px;">😇 <strong>Civilians:</strong> ${civStatus}</div>
+              </div>
+              ${allReady ? '<div style="margin-top:8px; font-weight:bold; color:#34d399; font-size:0.85rem;">✅ All living players have made their selections! Ready to wake everyone up.</div>' : ''}
+            </div>
+          `;
         } else {
-          if (hostLiveStatusEl) hostLiveStatusEl.innerHTML = `<div class="host-status-card info">⏳ Waiting for Doctor save...</div>`;
+          hostLiveStatusEl.innerHTML = `<div class="host-status-card info">⏳ Waiting for players to complete night actions...</div>`;
         }
       }
-      advanceText = `🔍 Advance to Detective Phase ➔`;
-    } else if (state.phase === 'night_detective') {
-      if (state.isDetectiveAlive === false) {
-        scriptText = `📢 <strong>SAY ALOUD:</strong> "Doctor sleep. Detective, wake up and select a suspect to investigate on your phone." <em style="color:#fde68a;">(Narrate a short pause to conceal their death from the group)</em>`;
-        if (hostLiveStatusEl) hostLiveStatusEl.innerHTML = `<div class="host-status-card warning">🔍 Detective is deceased (💀). Tap Next Phase ➔ when ready.</div>`;
-      } else {
-        scriptText = `📢 <strong>SAY ALOUD:</strong> "Doctor sleep. Detective, wake up and select a suspect to investigate on your phone."`;
-        const detData = state.detectiveData;
-        if (detData && detData.currentInquiry) {
-          const inq = detData.currentInquiry;
-          if (hostLiveStatusEl) hostLiveStatusEl.innerHTML = `<div class="host-status-card info">🔍 Detective investigated <strong>${inq.suspectName}</strong> ➔ Result: <strong>${inq.isMurderer ? '🔴 MURDERER' : '🟢 NOT MURDERER'}</strong></div>`;
-        } else {
-          if (hostLiveStatusEl) hostLiveStatusEl.innerHTML = `<div class="host-status-card info">⏳ Waiting for Detective investigation...</div>`;
-        }
-      }
-      advanceText = `🌅 Wake Everyone Up (Morning Report) ➔`;
-    } else if (state.phase === 'day_morning') {
+
+      advanceText = (state.nightProgress && state.nightProgress.allSubmitted)
+        ? `🌅 All Ready! Start Morning Narration ➔`
+        : `🌅 Start Morning Narration ➔`;
+      advanceAction = 'host_advance_phase';
+    } else if (state.phase === 'morning_narration') {
       const ann = state.morningAnnouncement;
       if (ann && ann.wasSaved) {
-        scriptText = `📢 <strong>SAY ALOUD:</strong> "Everyone wake up! The sun has risen. There was an attempted murder last night, but the Doctor saved them! Nobody died."`;
+        scriptText = `📢 <strong>SAY ALOUD:</strong> "Everyone wake up! The sun has risen. There was an attempted murder last night, but the Doctor arrived just in time to save them! Nobody died."`;
       } else if (ann && ann.attackedVictimName) {
-        scriptText = `📢 <strong>SAY ALOUD:</strong> "Everyone wake up! Tragically, <strong>${ann.attackedVictimName}</strong> was found murdered in the night!"`;
+        scriptText = `📢 <strong>SAY ALOUD:</strong> "Everyone wake up! Tragically, the town awakens to gruesome news: <strong>${ann.attackedVictimName}</strong> was murdered during the night!"`;
       } else {
         scriptText = `📢 <strong>SAY ALOUD:</strong> "Everyone wake up! The night was quiet. Nobody was attacked."`;
       }
-      if (hostLiveStatusEl) hostLiveStatusEl.innerHTML = `<div class="host-status-card info">🌅 Read morning story to the group, then start town discussion.</div>`;
+      if (hostLiveStatusEl) hostLiveStatusEl.innerHTML = `<div class="host-status-card info">🌅 <strong>Morning Narration:</strong> Tell the story aloud to the group. When ready, tap below to reveal the morning banner on players' devices.</div>`;
+      advanceText = `📢 Reveal Morning Outcome on Phones ➔`;
+      advanceAction = 'host_advance_phase';
+    } else if (state.phase === 'day_morning') {
+      scriptText = `📢 <strong>SAY ALOUD:</strong> "Look at your screens. The morning outcome is confirmed. Let's begin the investigation and debate!"`;
+      if (hostLiveStatusEl) hostLiveStatusEl.innerHTML = `<div class="host-status-card info">🌅 Morning results visible on all devices. Tap below to start the discussion phase.</div>`;
       advanceText = `💬 Start Town Discussion ➔`;
+      advanceAction = 'host_advance_phase';
     } else if (state.phase === 'day_discussion') {
       scriptText = `📢 <strong>SAY ALOUD:</strong> "Discussion is now open! Interrogate and debate who the murderers are."`;
       if (hostLiveStatusEl) hostLiveStatusEl.innerHTML = `<div class="host-status-card info">⏱️ Discussion timer running. Use +30s or Skip buttons if needed.</div>`;
       advanceText = `🗳️ Open Voting Ballot Now ➔`;
+      advanceAction = 'host_advance_phase';
     } else if (state.phase === 'day_voting') {
       scriptText = `📢 <strong>SAY ALOUD:</strong> "Time is up! Cast your votes secretly on your phones now."`;
       if (hostLiveStatusEl) hostLiveStatusEl.innerHTML = `<div class="host-status-card info">🗳️ Votes Cast: <strong>${state.votesCastCount || 0} / ${state.livingVotersCount || 0}</strong></div>`;
-      advanceText = `📊 End Voting & Show Tally ➔`;
+      advanceText = `📊 End Voting & Narrate Results ➔`;
       advanceAction = 'host_end_voting';
+    } else if (state.phase === 'vote_narration') {
+      scriptText = `📢 <strong>SAY ALOUD:</strong> "${state.tallyResultText || 'The ballots have been counted. The town has made its choice...'} As dusk falls, we prepare to see if more murderers lurk among us."`;
+      if (hostLiveStatusEl) hostLiveStatusEl.innerHTML = `<div class="host-status-card info">⚖️ <strong>Dusk Narration:</strong> Narrate the elimination outcome to the town. When ready, tap below to check remaining murderers and proceed.</div>`;
+      advanceText = `🌙 Reveal Outcome & Proceed ➔`;
+      advanceAction = 'host_advance_phase';
     } else if (state.phase === 'day_tally') {
       scriptText = `📢 <strong>SAY ALOUD:</strong> "${state.tallyResultText || 'Results are in.'}"`;
       if (hostLiveStatusEl) hostLiveStatusEl.innerHTML = `<div class="host-status-card info">📊 Review voting tally with the town. When ready, proceed to next night.</div>`;
       advanceText = `🌙 Begin Round ${(state.round || 1) + 1} (Night) ➔`;
+      advanceAction = 'host_advance_phase';
     }
 
     if (promptScriptEl) promptScriptEl.innerHTML = scriptText;
 
     if (btnHostAdvance) {
+      const isAllReadyInNight = (state.phase === 'night' || state.phase?.startsWith('night_')) && state.nightProgress && state.nightProgress.allSubmitted;
+      btnHostAdvance.className = isAllReadyInNight ? 'btn btn-primary btn-lg btn-block pulse-btn' : 'btn btn-primary btn-lg btn-block';
       btnHostAdvance.innerHTML = `<span>⚡</span> ${advanceText}`;
       btnHostAdvance.onclick = () => {
         SoundFX.playClick();
@@ -169,7 +189,10 @@ const MafiaHostPanel = {
       let attacksText = '⏳ No attacks registered';
       if (entry.nightAttacks && entry.nightAttacks.length > 0) {
         const attackDetails = entry.nightAttacks.map(a => `${a.murdererName} ➔ <strong>${a.targetName}</strong>`).join(', ');
-        attacksText = `${attackDetails} ${entry.confirmedVictimName ? `<em>(Consensus: ${entry.confirmedVictimName})</em>` : '<em style="color:#f87171;">(Split/No Consensus)</em>'}`;
+        const consensusTag = entry.wasDecidedRandomly
+          ? `<em style="color:#fbbf24;">(🎲 Randomly chosen from split: <strong>${entry.confirmedVictimName}</strong>)</em>`
+          : (entry.confirmedVictimName ? `<em>(Consensus: <strong>${entry.confirmedVictimName}</strong>)</em>` : '<em style="color:#f87171;">(Split/No Target)</em>');
+        attacksText = `${attackDetails} ${consensusTag}`;
       }
 
       // 2. Doctor Save

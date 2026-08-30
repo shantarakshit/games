@@ -6,14 +6,49 @@ const ActionLedger = require('./ActionLedger');
  */
 class DayPhaseHandler {
   /**
-   * Start Day Phase 4: Morning Revelation & Host Story.
+   * Start Buffer Phase 1: Morning Host Narration.
+   * Resolves night actions on server, provides host with story details,
+   * while keeping players on a suspenseful transition screen.
    */
-  static startPhase4(instance) {
+  static startMorningNarration(instance) {
     instance.stopTimer();
-    instance.phase = 'day_morning';
+    instance.phase = 'morning_narration';
 
-    // Resolve Night Actions
-    const victimId = instance.confirmedMurdererVictimId;
+    // Resolve Murderer Victim Selection
+    const livingMurderers = instance.getLivingMurdererIds();
+    let wasRandomlyChosen = false;
+    let victimId = instance.confirmedMurdererVictimId;
+
+    if (livingMurderers.length > 0 && !victimId) {
+      // Murderers have not unanimously agreed upon a target
+      const votedTargets = [];
+      for (const mId of livingMurderers) {
+        const t = instance.murdererVotes.get(mId);
+        if (t && !votedTargets.includes(t)) {
+          votedTargets.push(t);
+        }
+      }
+
+      let candidateTargets = votedTargets;
+      if (candidateTargets.length === 0) {
+        // If no murderer voted at all, pick randomly from living non-murderers, non-host
+        candidateTargets = instance.getLivingPlayerIds().filter(id => {
+          const r = instance.roles.get(id);
+          return r && r.role !== 'murderer' && id !== instance.hostSocketId;
+        });
+      }
+
+      if (candidateTargets.length > 0) {
+        const randomIndex = Math.floor(Math.random() * candidateTargets.length);
+        victimId = candidateTargets[randomIndex];
+        instance.confirmedMurdererVictimId = victimId;
+        wasRandomlyChosen = true;
+      }
+    }
+
+    instance.morningMurdererRandomlyChosen = wasRandomlyChosen;
+
+    // Resolve Night Actions against Doctor protection
     const savedId = instance.currentDoctorSavedId;
     const wasSaved = Boolean(victimId && savedId && victimId === savedId);
 
@@ -22,10 +57,29 @@ class DayPhaseHandler {
 
     const victimPlayer = victimId ? instance.room.players.get(victimId) : null;
     const ledgerEntry = ActionLedger.getEntry(instance.hostActionLedger, instance.round);
+    ledgerEntry.confirmedVictimName = victimPlayer ? victimPlayer.name : null;
+    ledgerEntry.wasDecidedRandomly = wasRandomlyChosen;
     ledgerEntry.morningOutcome = {
       attackedVictimName: victimPlayer ? victimPlayer.name : null,
-      wasSaved
+      wasSaved,
+      wasDecidedRandomly: wasRandomlyChosen
     };
+
+    instance.emitEvent('game_state_updated');
+  }
+
+  /**
+   * Start Day Phase 4: Morning Revelation & Banner.
+   * Officially reveals the night outcome to all players, updates eliminated status,
+   * and opens the morning announcement banner.
+   */
+  static startPhase4(instance) {
+    instance.stopTimer();
+    instance.phase = 'day_morning';
+
+    const victimId = instance.morningAttackedVictimId;
+    const wasSaved = instance.morningWasSaved;
+    const victimPlayer = victimId ? instance.room.players.get(victimId) : null;
 
     // If victim was targeted and NOT saved, eliminate them now
     if (victimId && !wasSaved) {
@@ -121,11 +175,13 @@ class DayPhaseHandler {
   }
 
   /**
-   * Start Day Phase 7: Results Tally & Elimination.
+   * Start Buffer Phase 2: Vote Narration (Host Dusk Story).
+   * Tallies the ballots and calculates elimination, but keeps imposter outcome
+   * and tally results hidden from non-host players until the host narrates.
    */
-  static startPhase7(instance) {
+  static startVoteNarration(instance) {
     instance.stopTimer();
-    instance.phase = 'day_tally';
+    instance.phase = 'vote_narration';
 
     const livingVoters = instance.getLivingPlayerIds().filter(id => id !== instance.hostSocketId);
     const voteCounts = new Map();
@@ -175,6 +231,8 @@ class DayPhaseHandler {
 
       if (playerInfo && playerInfo.role === 'murderer' && livingMurderers.length === 0) {
         instance.tallyResultText = `⚖️ ${eliminatedPlayer ? eliminatedPlayer.name : 'Player'} received ${maxVotes} vote${maxVotes === 1 ? '' : 's'} (${modeLabel}). The LAST murderer was eliminated!`;
+      } else if (playerInfo && playerInfo.role === 'murderer') {
+        instance.tallyResultText = `⚖️ ${eliminatedPlayer ? eliminatedPlayer.name : 'Player'} received ${maxVotes} vote${maxVotes === 1 ? '' : 's'} (${modeLabel}). A MURDERER was eliminated!`;
       } else {
         instance.tallyResultText = `⚖️ ${eliminatedPlayer ? eliminatedPlayer.name : 'Player'} received ${maxVotes} vote${maxVotes === 1 ? '' : 's'} (${modeLabel}) and was eliminated by town vote!`;
       }
@@ -239,15 +297,32 @@ class DayPhaseHandler {
       text: `📊 ${instance.tallyResultText}`
     });
 
+    instance.emitEvent('game_state_updated');
+  }
+
+  /**
+   * Resolve Vote Narration and Proceed to Next Phase:
+   * Checks if more imposters/murderers remain.
+   * If game over -> ended.
+   * If murderers remain -> begins Round N+1 Night phase.
+   */
+  static resolveVoteNarrationAndProceed(instance) {
+    instance.stopTimer();
+
     // Check Win Condition
     if (this.checkWinConditions(instance)) {
       instance.phase = 'ended';
+      instance.emitEvent('game_state_updated');
+      return;
     }
 
     // Update Doctor saved history for next round
     instance.previousDoctorSavedId = instance.currentDoctorSavedId;
 
-    instance.emitEvent('game_state_updated');
+    // Proceed to next round night
+    instance.round++;
+    const NightPhaseHandler = require('./NightPhaseHandler');
+    NightPhaseHandler.startNightPhase(instance);
   }
 
   /**

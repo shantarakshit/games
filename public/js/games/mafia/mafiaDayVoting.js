@@ -15,6 +15,15 @@ const MafiaDayVoting = {
     const ann = state.morningAnnouncement;
 
     if (morningBanner) {
+      let splitVoteNotice = '';
+      if ((state.myRole === 'murderer' || state.isHost) && state.murdererData && state.murdererData.wasDecidedRandomly && state.murdererData.confirmedVictimName) {
+        splitVoteNotice = `
+          <div class="murderer-split-resolution-box" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; padding: 10px 14px; border-radius: 8px; margin-top: 14px; text-align: left; font-size: 0.85rem; color: #fecaca;">
+            🔪 <strong>Mafia Secret Notice:</strong> Because the murderers were split or did not unanimously agree, <strong>${state.murdererData.confirmedVictimName}</strong> was randomly chosen as the attack target.
+          </div>
+        `;
+      }
+
       if (ann && ann.wasSaved) {
         morningBanner.className = 'morning-banner saved';
         morningBanner.innerHTML = `
@@ -22,6 +31,7 @@ const MafiaDayVoting = {
           <h2>A Miracle at Sunrise!</h2>
           <p>An attack occurred during the night, but the <strong>Doctor arrived in time to save them!</strong></p>
           <strong class="outcome-badge">💚 NOBODY DIED TONIGHT</strong>
+          ${splitVoteNotice}
         `;
       } else if (ann && ann.attackedVictimName) {
         morningBanner.className = 'morning-banner murdered';
@@ -31,6 +41,7 @@ const MafiaDayVoting = {
           <p>The town awakens to gruesome news...</p>
           <h1 class="victim-highlight">${ann.attackedVictimName} was Murdered!</h1>
           <strong class="outcome-badge">🖤 ELIMINATED FROM THE TOWN</strong>
+          ${splitVoteNotice}
         `;
       } else {
         morningBanner.className = 'morning-banner quiet';
@@ -38,6 +49,7 @@ const MafiaDayVoting = {
           <span class="banner-icon">☀️</span>
           <h2>A Peaceful Night</h2>
           <p>The town awakens safely with no casualties.</p>
+          ${splitVoteNotice}
         `;
       }
     }
@@ -237,6 +249,20 @@ const MafiaDayVoting = {
         `;
         gridEl.appendChild(row);
       });
+    }
+  },
+
+  renderNarrationBuffers(state) {
+    const morningBufferPanel = document.getElementById('mafiaMorningNarrationPanel');
+    const isMorningNarration = state.phase === 'morning_narration' && !state.winner;
+    if (morningBufferPanel) {
+      morningBufferPanel.classList.toggle('hidden', !isMorningNarration);
+    }
+
+    const voteBufferPanel = document.getElementById('mafiaVoteNarrationPanel');
+    const isVoteNarration = state.phase === 'vote_narration' && !state.winner;
+    if (voteBufferPanel) {
+      voteBufferPanel.classList.toggle('hidden', !isVoteNarration);
     }
   }
 };

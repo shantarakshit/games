@@ -87,7 +87,7 @@ const MafiaUI = {
 
     // 1. Audio Cues on Phase Transitions
     if (this.lastPhase && this.lastPhase !== state.phase) {
-      if (state.phase.startsWith('night_')) {
+      if (state.phase === 'night' || state.phase.startsWith('night_')) {
         SoundFX.playNightFall();
       } else if (state.phase === 'day_morning') {
         SoundFX.playMorningChime();
@@ -115,6 +115,7 @@ const MafiaUI = {
 
     // 5. Phase-Specific Views
     MafiaNightActions.render(state);
+    MafiaDayVoting.renderNarrationBuffers(state);
     MafiaDayVoting.renderMorningAnnouncement(state);
     MafiaDayVoting.renderDiscussionView(state);
     MafiaDayVoting.renderVotingView(state);
@@ -141,17 +142,14 @@ const MafiaUI = {
       } else if (state.phase === 'role_reveal') {
         phaseBadge.innerText = '🎭 ROLE REVEAL';
         phaseBadge.className = 'phase-badge discussion-badge';
-      } else if (state.phase === 'night_murderers') {
-        phaseBadge.innerText = '🌙 NIGHT: MURDERERS';
+      } else if (state.phase === 'night' || state.phase.startsWith('night_')) {
+        phaseBadge.innerText = '🌙 NIGHT ACTIONS';
         phaseBadge.className = 'phase-badge mafia-night-badge';
-      } else if (state.phase === 'night_doctor') {
-        phaseBadge.innerText = '🌙 NIGHT: DOCTOR';
-        phaseBadge.className = 'phase-badge mafia-night-badge';
-      } else if (state.phase === 'night_detective') {
-        phaseBadge.innerText = '🌙 NIGHT: DETECTIVE';
-        phaseBadge.className = 'phase-badge mafia-night-badge';
+      } else if (state.phase === 'morning_narration') {
+        phaseBadge.innerText = '🌅 SUNRISE NARRATION';
+        phaseBadge.className = 'phase-badge discussion-badge';
       } else if (state.phase === 'day_morning') {
-        phaseBadge.innerText = '🌅 MORNING STORY';
+        phaseBadge.innerText = '🌅 MORNING REPORT';
         phaseBadge.className = 'phase-badge discussion-badge';
       } else if (state.phase === 'day_discussion') {
         phaseBadge.innerText = '💬 TOWN DISCUSSION';
@@ -159,6 +157,9 @@ const MafiaUI = {
       } else if (state.phase === 'day_voting') {
         phaseBadge.innerText = '🗳️ TOWN VOTING';
         phaseBadge.className = 'phase-badge voting-badge';
+      } else if (state.phase === 'vote_narration') {
+        phaseBadge.innerText = '⚖️ DUSK NARRATION';
+        phaseBadge.className = 'phase-badge tally-badge';
       } else if (state.phase === 'day_tally') {
         phaseBadge.innerText = '📊 RESULTS TALLY';
         phaseBadge.className = 'phase-badge tally-badge';

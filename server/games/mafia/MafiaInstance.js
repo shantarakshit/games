@@ -42,10 +42,12 @@ class MafiaInstance {
     this.currentDoctorSavedId = null;  // socketId of player saved in current round
     this.currentDetectiveInquiry = null; // { suspectId: string, isMurderer: boolean }
     this.detectiveHistory = new Map(); // detectiveSocketId -> Array of { round, suspectId, suspectName, isMurderer }
+    this.civilianFavorites = new Map(); // civilianSocketId -> targetSocketId
 
     // Morning Resolution for Current Round
     this.morningAttackedVictimId = null;
     this.morningWasSaved = false;
+    this.morningMurdererRandomlyChosen = false;
 
     // Day Voting for Current Round
     this.dayVotes = new Map(); // voterSocketId -> candidateSocketId | 'ABSTAIN'
@@ -79,6 +81,7 @@ class MafiaInstance {
     this.eliminatedPlayers.clear();
     this.roles.clear();
     this.detectiveHistory.clear();
+    this.civilianFavorites.clear();
     this.timeline = [];
     this.hostActionLedger = [];
     this.winner = null;
@@ -106,8 +109,10 @@ class MafiaInstance {
     this.confirmedMurdererVictimId = null;
     this.currentDoctorSavedId = null;
     this.currentDetectiveInquiry = null;
+    this.civilianFavorites.clear();
     this.morningAttackedVictimId = null;
     this.morningWasSaved = false;
+    this.morningMurdererRandomlyChosen = false;
     this.dayVotes.clear();
     this.tallyData = [];
     this.tallyResultText = '';
@@ -126,16 +131,24 @@ class MafiaInstance {
     ActionLedger.recordDayTimeline(this, maxVotes, isTie, eliminatedId);
   }
 
+  startNightPhase() {
+    NightPhaseHandler.startNightPhase(this);
+  }
+
   startNightPhase1() {
-    NightPhaseHandler.startPhase1(this);
+    NightPhaseHandler.startNightPhase(this);
   }
 
   startNightPhase2() {
-    NightPhaseHandler.startPhase2(this);
+    NightPhaseHandler.startNightPhase(this);
   }
 
   startNightPhase3() {
-    NightPhaseHandler.startPhase3(this);
+    NightPhaseHandler.startNightPhase(this);
+  }
+
+  startMorningNarration() {
+    DayPhaseHandler.startMorningNarration(this);
   }
 
   startDayPhase4() {
@@ -150,8 +163,16 @@ class MafiaInstance {
     DayPhaseHandler.startPhase6(this);
   }
 
+  startVoteNarration() {
+    DayPhaseHandler.startVoteNarration(this);
+  }
+
+  resolveVoteNarrationAndProceed() {
+    DayPhaseHandler.resolveVoteNarrationAndProceed(this);
+  }
+
   startDayPhase7() {
-    DayPhaseHandler.startPhase7(this);
+    DayPhaseHandler.startVoteNarration(this);
   }
 
   checkWinConditions() {
@@ -211,7 +232,7 @@ class MafiaInstance {
     if (this.phase === 'day_discussion') {
       this.startDayPhase6(); // Advance to voting
     } else if (this.phase === 'day_voting') {
-      this.startDayPhase7(); // Force tally
+      this.startVoteNarration(); // Advance to vote narration buffer
     }
   }
 
@@ -230,7 +251,7 @@ class MafiaInstance {
     switch (action) {
       case 'host_start_round_1':
         if (isHost && this.phase === 'role_reveal') {
-          this.startNightPhase1();
+          this.startNightPhase();
         }
         break;
 
@@ -247,26 +268,30 @@ class MafiaInstance {
         NightPhaseHandler.handleDetectiveInvestigate(this, socketId, data.targetId, room);
         break;
 
+      case 'civilian_favorite':
+        NightPhaseHandler.handleCivilianFavorite(this, socketId, data.targetId, room);
+        break;
+
       case 'host_advance_phase':
         if (isHost) {
           if (this.phase === 'role_reveal') {
-            this.startNightPhase1();
-          } else if (this.phase === 'night_murderers') {
-            this.startNightPhase2();
-          } else if (this.phase === 'night_doctor') {
-            this.startNightPhase3();
-          } else if (this.phase === 'night_detective') {
+            this.startNightPhase();
+          } else if (this.phase === 'night' || this.phase.startsWith('night_')) {
+            this.startMorningNarration();
+          } else if (this.phase === 'morning_narration') {
             this.startDayPhase4();
           } else if (this.phase === 'day_morning') {
             this.startDayPhase5();
           } else if (this.phase === 'day_discussion') {
             this.startDayPhase6();
           } else if (this.phase === 'day_voting') {
-            this.startDayPhase7();
+            this.startVoteNarration();
+          } else if (this.phase === 'vote_narration') {
+            this.resolveVoteNarrationAndProceed();
           } else if (this.phase === 'day_tally') {
             if (!this.winner) {
               this.round++;
-              this.startNightPhase1();
+              this.startNightPhase();
             }
           }
         }
@@ -285,7 +310,6 @@ class MafiaInstance {
           ) {
             this.dayVotes.set(socketId, targetId);
           }
-          // Do not auto-advance when all players have voted; only advance when timer runs out or host advances
         }
         break;
 
@@ -344,6 +368,12 @@ class MafiaInstance {
       const target = this.murdererVotes.get(oldSocketId);
       this.murdererVotes.delete(oldSocketId);
       this.murdererVotes.set(newSocketId, target);
+    }
+
+    if (this.civilianFavorites.has(oldSocketId)) {
+      const target = this.civilianFavorites.get(oldSocketId);
+      this.civilianFavorites.delete(oldSocketId);
+      this.civilianFavorites.set(newSocketId, target);
     }
 
     if (this.previousDoctorSavedId === oldSocketId) {
@@ -449,7 +479,8 @@ class MafiaInstance {
         distinctTargets: Array.from(distinctTargets.values()),
         confirmedVictimId: this.confirmedMurdererVictimId,
         confirmedVictimName: this.confirmedMurdererVictimId ? (room.players.get(this.confirmedMurdererVictimId)?.name || 'Victim') : null,
-        hasConsensus: !!this.confirmedMurdererVictimId
+        hasConsensus: !!this.confirmedMurdererVictimId && !this.morningMurdererRandomlyChosen,
+        wasDecidedRandomly: Boolean(this.morningMurdererRandomlyChosen)
       };
     }
 
@@ -477,6 +508,73 @@ class MafiaInstance {
       };
     }
 
+    // Civilian payload
+    let civilianData = null;
+    if (myRole === 'civilian' || isHost) {
+      const favId = this.civilianFavorites.get(socketId) || null;
+      civilianData = {
+        myFavoriteId: favId,
+        myFavoriteName: favId ? (room.players.get(favId)?.name || 'Player') : null
+      };
+    }
+
+    // Night Submissions Progress Breakdown
+    const livingMurderers = this.getLivingMurdererIds();
+    const docId = this.getSpecialRoleSocketId('doctor');
+    const isDoctorAlive = docId ? !this.eliminatedPlayers.has(docId) : false;
+    const detId = this.getSpecialRoleSocketId('detective');
+    const isDetectiveAlive = detId ? !this.eliminatedPlayers.has(detId) : false;
+    const livingCivilians = livingPlayers.filter(p => {
+      const r = this.roles.get(p.id);
+      return r && r.role === 'civilian';
+    });
+
+    let murdererSubmittedCount = 0;
+    livingMurderers.forEach(mId => {
+      if (this.murdererVotes.has(mId)) murdererSubmittedCount++;
+    });
+
+    const doctorSubmitted = isDoctorAlive ? Boolean(this.currentDoctorSavedId) : null;
+    const detectiveSubmitted = isDetectiveAlive ? Boolean(this.currentDetectiveInquiry) : null;
+    
+    let civilianSubmittedCount = 0;
+    livingCivilians.forEach(c => {
+      if (this.civilianFavorites.has(c.id)) civilianSubmittedCount++;
+    });
+
+    let totalLivingNonHost = livingPlayers.length;
+    let totalNightSubmissions = murdererSubmittedCount + civilianSubmittedCount + (doctorSubmitted ? 1 : 0) + (detectiveSubmitted ? 1 : 0);
+    const allNightActionsSubmitted = totalLivingNonHost > 0 && totalNightSubmissions >= totalLivingNonHost;
+
+    const nightProgress = {
+      totalLivingCount: totalLivingNonHost,
+      submittedCount: totalNightSubmissions,
+      allSubmitted: allNightActionsSubmitted,
+      murderers: {
+        submitted: murdererSubmittedCount,
+        total: livingMurderers.length,
+        hasConsensus: Boolean(this.confirmedMurdererVictimId),
+        confirmedVictimName: this.confirmedMurdererVictimId ? (room.players.get(this.confirmedMurdererVictimId)?.name || 'Victim') : null
+      },
+      doctor: {
+        isAlive: isDoctorAlive,
+        submitted: Boolean(this.currentDoctorSavedId),
+        savedName: this.currentDoctorSavedId ? (room.players.get(this.currentDoctorSavedId)?.name || 'Protected') : null
+      },
+      detective: {
+        isAlive: isDetectiveAlive,
+        submitted: Boolean(this.currentDetectiveInquiry),
+        inquiry: this.currentDetectiveInquiry ? {
+          suspectName: room.players.get(this.currentDetectiveInquiry.suspectId)?.name || 'Suspect',
+          isMurderer: this.currentDetectiveInquiry.isMurderer
+        } : null
+      },
+      civilians: {
+        submitted: civilianSubmittedCount,
+        total: livingCivilians.length
+      }
+    };
+
     // Daytime voting progress
     const livingVotersCount = livingPlayers.length;
     const votesCastCount = this.dayVotes.size;
@@ -502,16 +600,6 @@ class MafiaInstance {
       };
     }
 
-    const isDoctorAlive = (() => {
-      const docId = this.getSpecialRoleSocketId('doctor');
-      return docId ? !this.eliminatedPlayers.has(docId) : false;
-    })();
-
-    const isDetectiveAlive = (() => {
-      const detId = this.getSpecialRoleSocketId('detective');
-      return detId ? !this.eliminatedPlayers.has(detId) : false;
-    })();
-
     return {
       gameId: 'mafia',
       round: this.round,
@@ -529,28 +617,34 @@ class MafiaInstance {
       murdererData,
       doctorData,
       detectiveData,
+      civilianData,
+      nightProgress: isHost ? nightProgress : undefined,
 
       // Host Only God-Mode Data
       hostActionLedger: isHost ? this.hostActionLedger : undefined,
       isDoctorAlive: isHost ? isDoctorAlive : undefined,
       isDetectiveAlive: isHost ? isDetectiveAlive : undefined,
 
-      // Morning Announcement
-      morningAnnouncement: {
+      // Morning Announcement (revealed after morning_narration)
+      morningAnnouncement: (isHost || ['day_morning', 'day_discussion', 'day_voting', 'vote_narration', 'ended'].includes(this.phase)) ? {
         attackedVictimId: this.morningAttackedVictimId,
         attackedVictimName: this.morningAttackedVictimId ? (room.players.get(this.morningAttackedVictimId)?.name || 'A townsperson') : null,
         wasSaved: this.morningWasSaved
+      } : {
+        attackedVictimId: null,
+        attackedVictimName: null,
+        wasSaved: false
       },
 
-      // Daytime Voting & Tally
+      // Daytime Voting & Tally (revealed after vote_narration)
       hasVotedDay: this.dayVotes.has(socketId),
       myDayVote: this.dayVotes.get(socketId) || null,
       votesCastCount,
       livingVotersCount,
       liveVotingTally,
-      tallyData: this.phase === 'day_tally' || this.winner ? this.tallyData : [],
-      tallyResultText: this.tallyResultText,
-      eliminatedInTallyId: this.eliminatedInTallyId,
+      tallyData: (isHost || this.winner || this.phase === 'day_tally') ? this.tallyData : [],
+      tallyResultText: (isHost || this.winner || this.phase === 'day_tally') ? this.tallyResultText : '',
+      eliminatedInTallyId: (isHost || this.winner || this.phase === 'day_tally') ? this.eliminatedInTallyId : null,
 
       // Game Over & Full Match Timeline
       winner: this.winner,

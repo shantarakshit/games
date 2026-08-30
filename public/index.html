@@ -532,6 +532,18 @@
           </div>
         </div>
 
+        <!-- Morning Narration Buffer Panel (Buffer 1) -->
+        <div id="mafiaMorningNarrationPanel" class="glass-panel narration-buffer-panel morning-buffer hidden">
+          <div class="narration-buffer-content">
+            <span class="buffer-icon pulse-glow">🌅</span>
+            <h2>The Sun is Rising...</h2>
+            <p>Dawn breaks over the town. Listen closely to the <strong>Host's narration</strong> as they reveal how the night unfolded.</p>
+            <div class="narration-waiting-badge">
+              <span class="pulse-dot"></span> Waiting for Host...
+            </div>
+          </div>
+        </div>
+
         <!-- Morning Announcement Panel -->
         <div id="mafiaMorningPanel" class="glass-panel morning-panel hidden">
           <div id="mafiaMorningBanner" class="morning-banner">
@@ -556,6 +568,18 @@
           <div id="mafiaVotingStatus" class="voting-status-text">Select one suspect to vote for elimination:</div>
           <div id="mafiaVotingGrid" class="voting-grid">
             <!-- Candidates -->
+          </div>
+        </div>
+
+        <!-- Vote Narration Buffer Panel (Buffer 2) -->
+        <div id="mafiaVoteNarrationPanel" class="glass-panel narration-buffer-panel vote-buffer hidden">
+          <div class="narration-buffer-content">
+            <span class="buffer-icon pulse-glow">⚖️</span>
+            <h2>The Town Has Voted</h2>
+            <p>The ballots have been collected and sealed. Listen closely to the <strong>Host's narration</strong> as dusk settles upon the town.</p>
+            <div class="narration-waiting-badge">
+              <span class="pulse-dot"></span> Waiting for Host...
+            </div>
           </div>
         </div>
 
@@ -748,20 +772,18 @@
               <li><strong>🔪 Murderers (1–3):</strong> Secretly choose a victim each night. If split, swap votes live on-screen to reach consensus.</li>
               <li><strong>💉 Doctor (1):</strong> Protects 1 player each night (can protect self). <em>Rule: Cannot protect the same person two rounds in a row.</em></li>
               <li><strong>🔍 Detective (1):</strong> Investigates 1 suspect each night. Receives immediate feedback: 🔴 Murderer or 🟢 Not Murderer. Maintains a personal investigation ledger.</li>
-              <li><strong>😇 Civilians:</strong> Sleep at night; debate and vote during the day.</li>
+              <li><strong>😇 Civilians:</strong> Select their favorite alive player during the night to stay active; debate and vote during the day.</li>
             </ul>
           </div>
 
           <div class="rule-section">
             <h4>🔄 Round Flow</h4>
             <ol>
-              <li><strong>🌙 Night 1 (Murderers):</strong> Murderers wake up silently and agree on a victim.</li>
-              <li><strong>🌙 Night 2 (Doctor):</strong> Doctor selects someone to protect. If it matches the victim, the victim survives!</li>
-              <li><strong>🌙 Night 3 (Detective):</strong> Detective investigates 1 living suspect.</li>
-              <li><strong>🌅 Morning Report:</strong> Host announces whether someone was murdered or saved.</li>
+              <li><strong>🌙 Unified Night Phase:</strong> All living players make their secret selections on their phones simultaneously (Murderers agree on a victim, Doctor protects, Detective investigates, and Civilians pick a favorite).</li>
+              <li><strong>🌅 Morning Report:</strong> Host announces whether someone was murdered or saved by the Doctor.</li>
               <li><strong>💬 Town Discussion:</strong> Timed in-person debate (Host can add <code>+30s</code> or skip).</li>
               <li><strong>🗳️ Secret Town Ballot:</strong> Secret voting ballot with live anonymous vote counts and an <strong>Abstain / Skip</strong> option.</li>
-              <li><strong>📊 Results Tally:</strong> Strict majority ($\lfloor \frac{\text{living}}{2} \rfloor + 1$) eliminates a suspect. If no majority is reached, no one is eliminated.</li>
+              <li><strong>📊 Results Tally:</strong> Town votes are tallied to eliminate a suspect.</li>
             </ol>
           </div>
 
