@@ -754,3 +754,480 @@
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.4; transform: scale(0.8); }
 }
+
+/* ==========================================================================
+   Morning Banner Outcomes
+   ========================================================================== */
+
+.morning-banner {
+  text-align: center;
+  padding: 24px 20px;
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  animation: fadeIn 0.35s ease-out;
+}
+
+.morning-banner.saved {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(6, 95, 70, 0.5) 100%);
+  border: 2px solid #10b981;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+}
+
+.morning-banner.murdered {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(127, 29, 29, 0.6) 100%);
+  border: 2px solid #ef4444;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.35);
+}
+
+.morning-banner.quiet {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(15, 23, 42, 0.6) 100%);
+  border: 2px solid rgba(245, 158, 11, 0.4);
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.2);
+}
+
+.banner-icon {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.morning-banner h2 {
+  font-family: var(--font-heading);
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 6px;
+}
+
+.morning-banner p {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 10px;
+}
+
+.victim-highlight {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: #f87171;
+  text-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
+  margin-bottom: 8px;
+}
+
+.outcome-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.morning-banner.saved .outcome-badge {
+  background: rgba(16, 185, 129, 0.3);
+  color: #6ee7b7;
+  border: 1px solid #10b981;
+}
+
+.morning-banner.murdered .outcome-badge {
+  background: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  border: 1px solid #ef4444;
+}
+
+/* ==========================================================================
+   Detective Notebook Card
+   ========================================================================== */
+
+.detective-notebook-card {
+  background: rgba(30, 27, 75, 0.45);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-top: 14px;
+}
+
+.detective-notebook-card h4 {
+  font-family: var(--font-heading);
+  font-size: 0.92rem;
+  color: #c4b5fd;
+  margin-bottom: 10px;
+}
+
+.detective-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detective-history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.detective-history-item.murderer {
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+}
+
+.detective-history-item.innocent {
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #6ee7b7;
+}
+
+/* ==========================================================================
+   Voting Ballot Cards & Grid
+   ========================================================================== */
+
+.voting-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.voting-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-md);
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  user-select: none;
+}
+
+.voting-card:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.voting-card.my-vote {
+  background: rgba(99, 102, 241, 0.25);
+  border-color: #818cf8;
+  box-shadow: 0 0 14px rgba(99, 102, 241, 0.4);
+}
+
+.voting-card.abstain-card {
+  border-style: dashed;
+  opacity: 0.85;
+}
+
+.voting-card.abstain-card.my-vote {
+  border-color: #94a3b8;
+  background: rgba(148, 163, 184, 0.2);
+  opacity: 1;
+}
+
+.voting-avatar {
+  font-size: 1.8rem;
+}
+
+.voting-name {
+  font-weight: 700;
+  font-size: 0.88rem;
+  text-align: center;
+  word-break: break-word;
+}
+
+.voted-tag {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.25);
+  padding: 2px 8px;
+  border-radius: 8px;
+  margin-top: 2px;
+}
+
+/* ==========================================================================
+   Results Tally Screen
+   ========================================================================== */
+
+.tally-panel {
+  padding: 20px;
+}
+
+.tally-banner {
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.tally-banner h3 {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  color: #e0e7ff;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.tally-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.tally-bar-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  position: relative;
+  overflow: hidden;
+}
+
+.tally-bar-card.eliminated {
+  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.tally-avatar {
+  font-size: 1.6rem;
+  flex-shrink: 0;
+}
+
+.tally-info {
+  display: flex;
+  flex: 1;
+  justify-content: space-between;
+  align-items: center;
+  min-width: 0;
+  gap: 8px;
+}
+
+.tally-name {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tally-votes-pill {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #c7d2fe;
+  flex-shrink: 0;
+}
+
+.eliminated-stamp {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%) rotate(-6deg);
+  background: #ef4444;
+  color: #fff;
+  font-weight: 900;
+  font-size: 0.72rem;
+  letter-spacing: 1px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid #fecaca;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* ==========================================================================
+   Host Action Ledger Round Cards
+   ========================================================================== */
+
+.host-ledger-card {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 3px solid #f59e0b;
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-bottom: 10px;
+}
+
+.host-ledger-card-header {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 0.88rem;
+  color: #fbbf24;
+  margin-bottom: 8px;
+}
+
+.host-ledger-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.82rem;
+}
+
+.ledger-row {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.ledger-label {
+  color: #94a3b8;
+  font-weight: 700;
+  min-width: 90px;
+  flex-shrink: 0;
+}
+
+.ledger-val {
+  color: #f1f5f9;
+  flex: 1;
+  word-break: break-word;
+}
+
+/* ==========================================================================
+   Game Over Winner Banner & Roles Revealed Grid
+   ========================================================================== */
+
+.winner-banner {
+  text-align: center;
+  padding: 28px 20px;
+  border-radius: var(--radius-lg);
+  margin-bottom: 20px;
+}
+
+.winner-banner.civilians-win {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(6, 95, 70, 0.6) 100%);
+  border: 2px solid #10b981;
+  box-shadow: 0 0 24px rgba(16, 185, 129, 0.35);
+}
+
+.winner-banner.mafia-wins {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(127, 29, 29, 0.6) 100%);
+  border: 2px solid #ef4444;
+  box-shadow: 0 0 24px rgba(239, 68, 68, 0.35);
+}
+
+.winner-trophy {
+  font-size: 3.5rem;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.winner-banner h1 {
+  font-family: var(--font-heading);
+  font-size: 1.8rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #fff;
+  margin-bottom: 6px;
+}
+
+.winner-banner p {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0;
+}
+
+.roles-revealed-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.role-reveal-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+}
+
+.role-reveal-card.dead {
+  opacity: 0.6;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.role-reveal-card .player-avatar {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.role-reveal-card .player-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.role-reveal-card .player-name {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.role-tag {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-block;
+  align-self: flex-start;
+  white-space: nowrap;
+}
+
+.role-tag.host { background: rgba(245, 158, 11, 0.25); color: #fde68a; border: 1px solid rgba(245, 158, 11, 0.4); }
+.role-tag.murderer { background: rgba(239, 68, 68, 0.25); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); }
+.role-tag.doctor { background: rgba(16, 185, 129, 0.25); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.4); }
+.role-tag.detective { background: rgba(59, 130, 246, 0.25); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.4); }
+.role-tag.civilian { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.3); }
+
+/* ==========================================================================
+   Party Players in Match Bottom Roster
+   ========================================================================== */
+
+.party-player-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.party-player-pill.eliminated {
+  opacity: 0.5;
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+}
+
+.party-player-pill.host {
+  border-color: rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.15);
+  color: #fde68a;
+}

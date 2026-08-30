@@ -77,6 +77,18 @@ const SettingsModal = {
         desc.className = 'setting-desc';
         desc.innerText = item.description;
 
+        // If discussionTimer is set to infinite (0), automatically set votingTimer to infinite (0)
+        if (item.id === 'discussionTimer') {
+          select.addEventListener('change', () => {
+            if (String(select.value) === '0') {
+              const votingSelect = settingsSchemaContainer.querySelector('select[data-setting-id="votingTimer"]');
+              if (votingSelect) {
+                votingSelect.value = '0';
+              }
+            }
+          });
+        }
+
         itemContainer.appendChild(label);
         itemContainer.appendChild(select);
         itemContainer.appendChild(desc);

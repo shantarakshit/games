@@ -321,32 +321,37 @@ const SpyUI = {
   },
 
   setupListeners() {
-    // Peek Card Sound & Touch/Click support for Safari & mobile
+    // Peek Card Sound & Mobile/Desktop Pointer Capture
     const secretCard = document.getElementById('spySecretCard');
     if (secretCard) {
-      const showPeek = (e) => {
-        if (e && e.cancelable && e.type === 'touchstart') e.preventDefault();
+      let isPeeking = false;
+
+      const startPeek = (e) => {
+        if (isPeeking) return;
+        isPeeking = true;
         secretCard.classList.add('is-peeking');
         SoundFX.playCardFlip();
-      };
-      const hidePeek = () => {
-        secretCard.classList.remove('is-peeking');
-      };
-
-      secretCard.addEventListener('pointerdown', showPeek);
-      secretCard.addEventListener('pointerup', hidePeek);
-      secretCard.addEventListener('pointerleave', hidePeek);
-      secretCard.addEventListener('pointercancel', hidePeek);
-
-      secretCard.addEventListener('touchstart', showPeek, { passive: false });
-      secretCard.addEventListener('touchend', hidePeek);
-      secretCard.addEventListener('touchcancel', hidePeek);
-
-      secretCard.addEventListener('click', () => {
-        if (!secretCard.classList.contains('is-peeking')) {
-          secretCard.classList.toggle('is-peeking');
-          SoundFX.playCardFlip();
+        if (e.pointerId !== undefined && secretCard.setPointerCapture) {
+          try { secretCard.setPointerCapture(e.pointerId); } catch (_) {}
         }
+      };
+
+      const stopPeek = (e) => {
+        if (!isPeeking) return;
+        isPeeking = false;
+        secretCard.classList.remove('is-peeking');
+        if (e && e.pointerId !== undefined && secretCard.releasePointerCapture) {
+          try { secretCard.releasePointerCapture(e.pointerId); } catch (_) {}
+        }
+      };
+
+      secretCard.addEventListener('pointerdown', startPeek);
+      secretCard.addEventListener('pointerup', stopPeek);
+      secretCard.addEventListener('pointercancel', stopPeek);
+      secretCard.addEventListener('pointerleave', stopPeek);
+      secretCard.addEventListener('contextmenu', (e) => e.preventDefault());
+      secretCard.addEventListener('click', (e) => {
+        e.preventDefault();
       });
     }
 

@@ -15,27 +15,26 @@ The classic social deduction game of deception, investigation, protection, and s
   - **💉 Doctor (1 player)**: Simultaneously chooses 1 living player to protect each night (can protect themselves, but cannot protect the Host or dead players). *Rule: Cannot protect the same player two rounds in a row.*
   - **🔍 Detective (1 player)**: Simultaneously investigates 1 living suspect each night to discover if they are a Murderer. Maintains a personal in-game Detective Investigation Ledger. *Restrictions: Cannot investigate the Host, dead players, themselves, or previously investigated suspects.*
   - **😇 Civilians (Townspeople)**: Stay actively engaged during the night by picking their favorite living townsperson (non-self, non-host, non-dead). Sleep at night, debate during daytime, and vote to eliminate suspected murderers.
-- **Night & Narration Pacing Architecture**:
-  - **Unified Concurrent Selection Phase**: Murderer voting, Doctor save, Detective investigation, and Civilian favorite selections all occur simultaneously during a single concurrent night phase, drastically reducing downtime and keeping all players engaged.
-  - **Buffer Phase 1 — Morning Host Narration (`morning_narration`)**: Between the Night phase and the Morning Banner reveal, the game enters a dedicated suspense buffer. The Host receives the God-mode night resolution and narration script to tell the story aloud to the room, while players see a suspenseful dawn buffer screen (*"🌅 The sun is rising... Listen to Host"*). Morning victim reveals and eliminations remain strictly hidden until the Host taps `📢 Reveal Morning Outcome on Phones ➔`.
-  - **Morning Announcement Banner (`day_morning`)**: Officially reveals the night outcome (murdered victim or doctor save) on all player screens and updates the town living roster before transition into town discussion.
-  - **Split-Vote Random Resolution**: If Murderers submit conflicting targets without unanimous agreement when the phase ends, one of the voted candidates is randomly chosen. Murderers and the Host receive a confidential morning notice detailing the resolution.
-  - **Buffer Phase 2 — Dusk Vote Narration (`vote_narration`)**: After secret town voting concludes, the game enters a second narration buffer before moving to the next night or ending the match. Ballots and elimination outcomes are calculated, but imposter identity and game progression are gated behind the Host's narration (*"⚖️ The town has voted... Listen to Host"*). When the Host taps `🌙 Reveal Outcome & Proceed ➔`, the game checks remaining imposters and seamlessly advances to Round N+1 Night (if murderers remain) or ends the match in victory.
-  - **Silent Player Actions**: All audio cues and click sounds during night phases are suppressed on player devices to prevent physical giveaways in the room.
-  - **Deceased Role Narration**: If the Doctor or Detective are eliminated, their presence in the narration flow is maintained naturally by the Host so players cannot deduce who was eliminated from room pauses alone. Deceased players see a spectator screen and cannot perform actions.
+- **8-Phase Narration & Day/Night Pipeline**:
+  1. `role_reveal`: Players secretly peek at their assigned role on mobile using pointer-captured card flips.
+  2. `night`: Simultaneous night actions for Murderers, Doctor, Detective, and Civilians.
+  3. `morning_narration`: Host receives the secret night resolution and narrates sunrise to the room while player devices display a suspenseful waiting buffer.
+  4. `day_morning`: Morning Announcement Banner reveals the sunrise outcome (Doctor miracle save or murdered victim) on all phones.
+  5. `day_discussion`: Town discussion and debate with real-time countdown (or untimed host pacing).
+  6. `day_voting`: Secret elimination voting with live anonymous candidate vote totals and abstain option.
+  7. `vote_narration`: Dusk suspense buffer where Host narrates the town vote results aloud before showing results.
+  8. `day_tally`: Results Tally screen displays vote counts, elimination stamps, and gavel sound effects across all player devices before advancing to the next Night round or concluding the game.
 - **Daytime Voting & Elimination**:
   - **Elimination Mode Setting**: Host can configure **Plurality** (highest votes eliminated; ties cancel) vs **Strict Majority** (>50% of living voters required).
-  - **Unified Untimed Pacing**: When daytime discussion is configured with No Timer (Untimed), the daytime voting ballot automatically runs untimed as well, guided by the Narrator/Host.
-  - **Deliberate Voting Progression**: The voting phase does not auto-advance merely because all living players have voted; it stays open so players can debate and swap votes until time runs out or the Host advances.
-  - **Live Anonymous Vote Counters**: During daytime voting, each suspect's card displays a live counter badge (`🗳️ X votes`) updating in real-time as votes are cast.
-  - **Dynamic Vote Swapping**: Active voters can tap another suspect at any time during the voting phase to instantly swap their ballot.
+  - **Timer Synchronization**: Selecting Infinite / Untimed Discussion (`0s`) in Settings automatically synchronizes the voting timer to Untimed (`0s`), while still allowing the Host to independently specify a finite voting countdown if desired.
+  - **Live Anonymous Vote Counters**: During daytime voting, candidate cards display live vote counts (`🗳️ X votes`) updating in real-time while keeping voter identities strictly secret.
+  - **Dynamic Vote Swapping**: Active voters can tap another suspect at any time during voting to instantly swap their ballot.
   - **Self-Vote Prevention & Abstain Ballot**: Players cannot vote for themselves, and active voters can choose to Abstain/Skip.
-  - **Plurality / Majority Elimination**: In plurality mode, the single highest vote receiver is eliminated. In majority mode, a candidate must receive >50% of living player votes.
   - **Tie Vote Protection**: If two or more suspects tie for the highest vote count, it is resolved as a tie and **no one is eliminated** for that round.
   - **Spectator Experience**: Eliminated players remain in the room as Spectators, watching live voting tallies, morning announcements, and end-game statistics.
 - **Win Conditions**:
   - **🏆 Civilians Win**: When all Murderers are successfully eliminated.
-  - **🏆 Mafia Wins**: When living Murderers equal or outnumber living Civilians ($\ge$).
+  - **🏆 Mafia Wins**: When living Murderers equal or outnumber living Civilians (50% or more of the town).
 - **Dedicated Match Timeline Ledger**: Complete match history detailing night targets, saves, investigations, split vote resolutions, and daytime elimination votes displayed in a dedicated, scrollable box exclusively to the 👑 Host.
 
 ---
@@ -45,6 +44,7 @@ Team-based word association and deduction (Red Team vs. Blue Team).
 
 - **Role Setup**: Red Spymaster, Blue Spymaster, and multiple Field Operatives per team with pre-game role claiming locks.
 - **Gameplay**: Spymasters provide 1-word clues with a target number. Field Operatives discuss and tap word cards on their turn.
+- **Strict Role Separation**: Spymasters cannot tap cards on behalf of players; Operatives cannot submit clues; inactive teams cannot act out of turn.
 - **Card Types**: Team Agents (Red/Blue), Innocent Bystanders (Neutral), and the sudden-death Assassin card.
 - **Controversial Rule Settings**:
   - **Starting Advantage**: Random (9 vs 8 cards), Equal (8 vs 8 cards), or Team-specific start.
@@ -61,7 +61,7 @@ A high-stakes bluffing game where everyone knows the secret category and locatio
 - **Randomized Discussion Starter**: Before the discussion phase begins, a living player (spy or non-spy) is randomly chosen to start the discussion. A prominent visual banner is broadcast to all players and the speaker is tagged in the player roster.
 - **Unified Unlimited Discussion & Voting**: If discussion is set to Untimed (`0s`), the voting phase is automatically untimed too, giving the Host clean controls (`📊 End Vote & Tally ➔`) to advance when discussion ends.
 - **Deliberate Voting Phase**: Voting does not auto-advance when all votes are in; players can change/swap votes until the timer runs down or the Host ends the vote.
-- **Privacy First (Cross-Platform Peek)**: Tap & Hold or Tap-to-Toggle to peek at your secret location and role with full iOS Safari/Android compatibility.
+- **Privacy First (Pointer Capture Peek)**: Hold to peek at your secret location and role with pointer capture, preventing accidental leaks on iOS Safari and Android.
 - **Cover-Typing Phase (Optional)**: 20-second disguised typing phase where innocents type assigned words and impostors type `PASS` (or submit a location guess) to avoid device physical cues.
 - **Elimination Mode Setting**: Host can configure **Plurality** (highest votes eliminated; ties cancel) vs **Strict Majority** (>50% of living voters required).
 - **Unanimous "No Imposters Left" Vote**: Option unlocked dynamically once enough players have been eliminated to make 0 impostors mathematically possible. **Always requires a 100% unanimous vote from all living players.**
@@ -74,6 +74,7 @@ A high-stakes bluffing game where everyone knows the secret category and locatio
 ## 🔒 Session Resilience, Mobile Support & Auto-Reconnection
 
 - **⚡ Silent Auto-Reconnection**: The client automatically caches active session credentials (`party_active_room_code`, `party_last_name`, `party_last_pin`) in `localStorage`. If a player's phone sleeps, locks, or changes networks, waking the phone or switching tabs triggers an instantaneous background re-authentication that restores their exact game view and role without page reloads.
+- **🔄 Socket Target Migration**: If a player disconnects and reconnects mid-game with a new socket ID, all active vote targets, doctor saves, detective investigation records, confirmed victim pointers, and tally results seamlessly migrate to their new connection.
 - **📱 Screen Wake Lock API**: Automatically activates `navigator.wakeLock` during active gameplay (Mafia, Spy, and Codenames), keeping phone screens awake and preventing sleep/dimming during story narration and debate.
 - **⏱️ 15-Minute Mid-Game Disconnect Tolerance**: Mid-game player slots and roles are retained for 15 minutes upon disconnect, ensuring no player is kicked out during long physical room discussions.
 - **💓 Tuned Socket Heartbeats**: Configured with 1-minute `pingTimeout` (`60000ms`) and 10-second `pingInterval` to prevent accidental drops from mobile background throttling.
@@ -104,6 +105,8 @@ A high-stakes bluffing game where everyone knows the secret category and locatio
 │       ├── codenames/          # Codenames plugin & instance
 │       ├── spy/                # Imposter game plugin & instance
 │       └── mafia/              # Mafia plugin, RoleManager, Handlers & Ledger
+├── tests/
+│   └── regression-suite.js     # Automated live regression test suite
 └── public/
     ├── index.html              # Single Page Application layout
     ├── css/                    # Modular Glassmorphism design system
@@ -125,13 +128,22 @@ A high-stakes bluffing game where everyone knows the secret category and locatio
 
 ---
 
-## 🧪 Automated Testing & Simulation
+## 🧪 Automated Testing & Regression
 
-The project is thoroughly verified with automated multi-client simulation test scripts covering all 3 games (Mafia, Codenames, Spy), role mechanics, data isolation / anti-leak rules, and edge cases:
+The repository includes a comprehensive, automated regression suite covering all games, rules, role restrictions, edge cases, and socket events.
 
-- Multi-client Socket.io server simulation with simultaneous player connections and PIN authentication.
-- Scoped state validation ensuring secret roles and buffer phase outcomes are strictly isolated from unauthorized devices.
-- Seamless multi-round progression and endgame victory handling.
+```bash
+# Run the complete automated regression test suite
+npm test
+```
+
+### What `npm test` Validates:
+1. **Lobby & Security**: Room creation with 4-digit PINs, nickname collision blocks, invalid PIN rejections, host privileges enforcement, and kicking players.
+2. **Mafia Full Match**: Auto role distribution (Murderers, Doctor, Detective, Civilians), Doctor miracle saves, Detective inquiries & notebook history, voting plurality/majority, dusk narration, day tally screen, and Civilian victory.
+3. **Mafia Edge Cases**: Doctor consecutive save restriction, Detective single-inquiry & re-investigation blocks, and strict majority threshold failure (0 eliminations on tie/under-threshold).
+4. **Spy (Impostor)**: Standard vs. Hardcore Blind modes, cover-typing camouflage, and single location guess limits.
+5. **Codenames**: Team selection, Spymaster claim locks, strict role separation (Operatives cannot give clues, Spymasters cannot tap cards), and Instant Loss vs. Soft Assassin penalty modes.
+6. **Smart Server Lifecycle**: Automatically connects to the active server on `http://127.0.0.1:3000` or spawns a transient test server in-memory, ensuring seamless execution in both local development and CI/CD pipelines.
 
 ---
 

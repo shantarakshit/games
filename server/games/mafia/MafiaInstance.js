@@ -184,7 +184,11 @@ class MafiaInstance {
   }
 
   getLivingPlayerIds() {
-    return Array.from(this.room.players.keys()).filter(id => id !== this.hostSocketId && !this.eliminatedPlayers.has(id));
+    return Array.from(this.room.players.keys()).filter(id =>
+      id !== this.hostSocketId &&
+      id !== this.room.hostId &&
+      !this.eliminatedPlayers.has(id)
+    );
   }
 
   getLivingMurdererIds() {
@@ -287,12 +291,9 @@ class MafiaInstance {
           } else if (this.phase === 'day_voting') {
             this.startVoteNarration();
           } else if (this.phase === 'vote_narration') {
-            this.resolveVoteNarrationAndProceed();
+            DayPhaseHandler.startDayTally(this);
           } else if (this.phase === 'day_tally') {
-            if (!this.winner) {
-              this.round++;
-              this.startNightPhase();
-            }
+            DayPhaseHandler.resolveTallyAndProceed(this);
           }
         }
         break;
@@ -330,7 +331,7 @@ class MafiaInstance {
 
       case 'host_end_voting':
         if (isHost && this.phase === 'day_voting') {
-          this.startDayPhase7();
+          this.startVoteNarration();
         }
         break;
 
@@ -364,6 +365,7 @@ class MafiaInstance {
       this.eliminatedPlayers.add(newSocketId);
     }
 
+    // Migrate player's own voter/actor entry
     if (this.murdererVotes.has(oldSocketId)) {
       const target = this.murdererVotes.get(oldSocketId);
       this.murdererVotes.delete(oldSocketId);
@@ -374,6 +376,37 @@ class MafiaInstance {
       const target = this.civilianFavorites.get(oldSocketId);
       this.civilianFavorites.delete(oldSocketId);
       this.civilianFavorites.set(newSocketId, target);
+    }
+
+    if (this.dayVotes.has(oldSocketId)) {
+      const target = this.dayVotes.get(oldSocketId);
+      this.dayVotes.delete(oldSocketId);
+      this.dayVotes.set(newSocketId, target);
+    }
+
+    if (this.detectiveHistory.has(oldSocketId)) {
+      const hist = this.detectiveHistory.get(oldSocketId);
+      this.detectiveHistory.delete(oldSocketId);
+      this.detectiveHistory.set(newSocketId, hist);
+    }
+
+    // Migrate target IDs across all maps and round states
+    for (const [mId, targetId] of this.murdererVotes.entries()) {
+      if (targetId === oldSocketId) this.murdererVotes.set(mId, newSocketId);
+    }
+
+    for (const [cId, targetId] of this.civilianFavorites.entries()) {
+      if (targetId === oldSocketId) this.civilianFavorites.set(cId, newSocketId);
+    }
+
+    for (const [vId, candId] of this.dayVotes.entries()) {
+      if (candId === oldSocketId) this.dayVotes.set(vId, newSocketId);
+    }
+
+    for (const [detId, hist] of this.detectiveHistory.entries()) {
+      hist.forEach(h => {
+        if (h.suspectId === oldSocketId) h.suspectId = newSocketId;
+      });
     }
 
     if (this.previousDoctorSavedId === oldSocketId) {
@@ -388,16 +421,16 @@ class MafiaInstance {
       this.confirmedMurdererVictimId = newSocketId;
     }
 
-    if (this.detectiveHistory.has(oldSocketId)) {
-      const hist = this.detectiveHistory.get(oldSocketId);
-      this.detectiveHistory.delete(oldSocketId);
-      this.detectiveHistory.set(newSocketId, hist);
+    if (this.morningAttackedVictimId === oldSocketId) {
+      this.morningAttackedVictimId = newSocketId;
     }
 
-    if (this.dayVotes.has(oldSocketId)) {
-      const target = this.dayVotes.get(oldSocketId);
-      this.dayVotes.delete(oldSocketId);
-      this.dayVotes.set(newSocketId, target);
+    if (this.eliminatedInTallyId === oldSocketId) {
+      this.eliminatedInTallyId = newSocketId;
+    }
+
+    if (this.currentDetectiveInquiry && this.currentDetectiveInquiry.suspectId === oldSocketId) {
+      this.currentDetectiveInquiry.suspectId = newSocketId;
     }
   }
 
@@ -626,7 +659,7 @@ class MafiaInstance {
       isDetectiveAlive: isHost ? isDetectiveAlive : undefined,
 
       // Morning Announcement (revealed after morning_narration)
-      morningAnnouncement: (isHost || ['day_morning', 'day_discussion', 'day_voting', 'vote_narration', 'ended'].includes(this.phase)) ? {
+      morningAnnouncement: (isHost || ['day_morning', 'day_discussion', 'day_voting', 'vote_narration', 'day_tally', 'ended'].includes(this.phase)) ? {
         attackedVictimId: this.morningAttackedVictimId,
         attackedVictimName: this.morningAttackedVictimId ? (room.players.get(this.morningAttackedVictimId)?.name || 'A townsperson') : null,
         wasSaved: this.morningWasSaved

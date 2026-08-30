@@ -16,19 +16,32 @@ const MafiaTimeline = {
     const timelineListEl = document.getElementById('mafiaTimelineList');
 
     if (bannerEl) {
+      let winSubtitle = state.winner === 'civilians'
+        ? 'The town has successfully brought all murderers to justice!'
+        : 'The murderers have equaled or outnumbered the town!';
+
+      let concludingEventHTML = '';
+      if (state.winReason === 'murderers-majority' && state.morningAnnouncement && state.morningAnnouncement.attackedVictimId) {
+        concludingEventHTML = `<div class="concluding-event-pill" style="margin-top: 10px; font-size: 0.9rem; color: #fecaca; background: rgba(239, 68, 68, 0.25); border: 1px solid #ef4444; border-radius: 8px; padding: 6px 12px;">💀 <strong>Final Night Casualty:</strong> ${state.morningAnnouncement.attackedVictimName} was murdered at sunrise!</div>`;
+      } else if (state.tallyResultText) {
+        concludingEventHTML = `<div class="concluding-event-pill" style="margin-top: 10px; font-size: 0.9rem; color: #c7d2fe; background: rgba(99, 102, 241, 0.25); border: 1px solid #818cf8; border-radius: 8px; padding: 6px 12px;">${state.tallyResultText}</div>`;
+      }
+
       if (state.winner === 'civilians') {
         bannerEl.className = 'winner-banner civilians-win';
         bannerEl.innerHTML = `
           <span class="winner-trophy">🏆</span>
           <h1>CIVILIANS WIN!</h1>
-          <p>The town has successfully brought all murderers to justice!</p>
+          <p>${winSubtitle}</p>
+          ${concludingEventHTML}
         `;
       } else {
         bannerEl.className = 'winner-banner mafia-wins';
         bannerEl.innerHTML = `
           <span class="winner-trophy">🔪</span>
           <h1>MAFIA WINS!</h1>
-          <p>The murderers have equaled or outnumbered the town!</p>
+          <p>${winSubtitle}</p>
+          ${concludingEventHTML}
         `;
       }
     }

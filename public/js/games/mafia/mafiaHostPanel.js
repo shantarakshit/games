@@ -101,8 +101,8 @@ const MafiaHostPanel = {
       advanceAction = 'host_end_voting';
     } else if (state.phase === 'vote_narration') {
       scriptText = `📢 <strong>SAY ALOUD:</strong> "${state.tallyResultText || 'The ballots have been counted. The town has made its choice...'} As dusk falls, we prepare to see if more murderers lurk among us."`;
-      if (hostLiveStatusEl) hostLiveStatusEl.innerHTML = `<div class="host-status-card info">⚖️ <strong>Dusk Narration:</strong> Narrate the elimination outcome to the town. When ready, tap below to check remaining murderers and proceed.</div>`;
-      advanceText = `🌙 Reveal Outcome & Proceed ➔`;
+      if (hostLiveStatusEl) hostLiveStatusEl.innerHTML = `<div class="host-status-card info">⚖️ <strong>Dusk Narration:</strong> Narrate the elimination outcome to the town. When ready, tap below to reveal the results and voting breakdown on players' phones.</div>`;
+      advanceText = `📊 Reveal Results on Phones ➔`;
       advanceAction = 'host_advance_phase';
     } else if (state.phase === 'day_tally') {
       scriptText = `📢 <strong>SAY ALOUD:</strong> "${state.tallyResultText || 'Results are in.'}"`;

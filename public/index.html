@@ -673,23 +673,23 @@
           </div>
 
           <div class="rule-section">
-            <h4>👥 Roles & Claiming</h4>
+            <h4>👥 Roles & Strict Separation</h4>
             <ul>
-              <li><strong>Red & Blue Spymasters:</strong> See the secret 5x5 color key grid. Give 1-word clues + number of related cards (e.g., <em>"Ocean 2"</em>).</li>
-              <li><strong>Field Operatives:</strong> Only see word cards. Discuss as a team, tap cards to guess, and decide when to pass turn.</li>
-              <li><strong>Spymaster Lock:</strong> Players claim Spymaster in the lobby before the match begins.</li>
+              <li><strong>Red & Blue Spymasters:</strong> See the secret 5x5 color key grid. Give 1-word clues + number of related cards (e.g., <em>"Ocean 2"</em>). <em>Restriction: Spymasters can NEVER tap cards on behalf of players.</em></li>
+              <li><strong>Field Operatives:</strong> Only see word cards. Discuss as a team, tap cards to guess, and decide when to pass turn. <em>Restriction: Operatives cannot submit clues.</em></li>
+              <li><strong>Lobby Role Locks:</strong> Both Red and Blue Spymaster positions must be claimed in the lobby before the match can begin.</li>
             </ul>
           </div>
 
           <div class="rule-section">
             <h4>🔄 Turn Flow</h4>
             <ol>
-              <li>Spymaster submits <strong>1 clue word</strong> and <strong>1 number</strong> representing the number of cards related to the clue.</li>
+              <li>Spymaster submits <strong>1 clue word</strong> and <strong>1 number</strong> representing the count of related cards (or 0 for Unlimited).</li>
               <li>Operatives discuss and tap cards one at a time:
                 <ul>
-                  <li>✅ <strong>Team Card:</strong> Scores +1 point. Team can keep guessing (up to <code>Clue + 1</code>) or tap <strong>Pass Turn</strong>.</li>
+                  <li>✅ <strong>Team Card:</strong> Scores +1 point. Team can keep guessing (up to <code>Clue + 1</code> in standard mode) or tap <strong>Pass Turn</strong>.</li>
                   <li>⚪ <strong>Bystander (Neutral):</strong> Turn ends immediately.</li>
-                  <li>❌ <strong>Opposing Card:</strong> Turn ends immediately and gives the opposing team a free point!</li>
+                  <li>❌ <strong>Opposing Card:</strong> Turn ends immediately and awards the opposing team a free card!</li>
                   <li>☠️ <strong>Assassin (Black Card):</strong> <strong>INSTANT LOSS!</strong> The team that taps the Assassin loses the game immediately (unless Soft Assassin rule is enabled).</li>
                 </ul>
               </li>
@@ -701,14 +701,14 @@
             <ul>
               <li><strong>Starting Advantage:</strong> Random (9 vs 8 cards), Equal (8 vs 8 cards), or Team-specific start.</li>
               <li><strong>Guess Limit:</strong> Clue + 1 (Standard catch-up rule), Strict (Clue number only), or Unlimited.</li>
-              <li><strong>Assassin Mode:</strong> Instant Loss (Standard tournament) or Soft (Lose point and pass turn).</li>
-              <li><strong>Turn Timer:</strong> Set 60s, 90s, 120s, or Unlimited turn durations.</li>
+              <li><strong>Assassin Mode:</strong> Instant Loss (Standard tournament) or Soft (Lose turn, apply +1 penalty, match continues).</li>
+              <li><strong>Turn Timer:</strong> Set 60s, 90s, 120s, or No Timer for untimed play.</li>
             </ul>
           </div>
 
           <div class="rule-section">
             <h4>🏆 Winning</h4>
-            <p>The first team to reveal all their secret agent cards wins the match! (Or wins if the opposing team taps the Assassin).</p>
+            <p>The first team to reveal all their secret agent cards wins the match! (Or wins immediately if the opposing team taps the Assassin).</p>
           </div>
         </div>
 
@@ -726,31 +726,32 @@
             <h4>🎭 Secret Roles & Peeking</h4>
             <ul>
               <li><strong>Innocents:</strong> See the exact Category and Secret Location (e.g., <em>Category: Landmarks, Location: Eiffel Tower</em>).</li>
-              <li><strong>The Imposter:</strong> Knows they are the spy, but the location is secret (<code>❓ SECRET</code>).</li>
-              <li><strong>Privacy Peek Card:</strong> Tap & Hold the secret card to peek your role privately away from friends sitting next to you.</li>
+              <li><strong>The Imposter:</strong> Knows they are the spy. In Standard mode they see the Category; in <strong>Hardcore Blind Mode</strong> they receive no category data (<code>❓ BLIND SPY</code>).</li>
+              <li><strong>Pointer Capture Peek:</strong> Touch and hold your secret card to peek safely. Releasing immediately conceals your role to prevent shoulder peeking.</li>
             </ul>
           </div>
 
           <div class="rule-section">
             <h4>🔄 Game Phases & Flow</h4>
             <ol>
-              <li><strong>Discussion Phase (Timed):</strong> Ask each other questions in person (e.g., <em>"Is it hot here?"</em>, <em>"Do you pay to enter?"</em>). Don't make questions too obvious or the spy will figure out the location! Host can add <code>+30s</code> or skip.</li>
+              <li><strong>Discussion Starter:</strong> A random player is highlighted on all screens to ask the opening question.</li>
+              <li><strong>Discussion Phase:</strong> Ask each other questions in person (e.g., <em>"Is it hot here?"</em>, <em>"Do you pay to enter?"</em>). Host can add <code>+30s</code> or skip.</li>
               <li><strong>Cover-Typing Phase (Optional):</strong>
                 <ul>
-                  <li><strong>Enabled (20s):</strong> Everyone types on their screen simultaneously. Innocents type a verification word; Imposters can submit a location guess or type <code>PASS</code> to avoid sound/touch giveaways.</li>
+                  <li><strong>Enabled (20s):</strong> Everyone types simultaneously. Innocents type a disguise word; Imposters can submit a location guess or type <code>PASS</code> to prevent device physical giveaways.</li>
                   <li><strong>Disabled:</strong> Skips typing and proceeds straight to voting.</li>
                 </ul>
               </li>
-              <li><strong>Secret Voting Ballot:</strong> Cast secret votes on who you suspect is the Imposter. Once enough eliminations occur, living players can vote <strong>"No Imposters Left"</strong> to trigger a game check.</li>
-              <li><strong>Results Tally:</strong> The player with the most votes is ousted (identities remain hidden until the game concludes).</li>
+              <li><strong>Secret Voting Ballot:</strong> Cast votes secretly with live anonymous totals displayed on cards. You can change your vote anytime before time expires. Once enough players are eliminated, living players can vote <strong>"No Imposters Left"</strong>.</li>
+              <li><strong>Results Tally:</strong> The suspect with the most votes is ousted. (Plurality mode eliminates top suspect; Strict Majority requires &gt;50% of living voters).</li>
             </ol>
           </div>
 
           <div class="rule-section">
             <h4>🏆 Winning</h4>
             <ul>
-              <li><strong>Innocents Win:</strong> All Imposters are eliminated, or an Imposter makes an incorrect location guess, or town unanimously votes "No Imposters Left".</li>
-              <li><strong>Imposters Win:</strong> An Imposter correctly guesses the secret location, or living Imposters equal living Innocents ($\ge$).</li>
+              <li><strong>Innocents Win:</strong> All Imposters are eliminated, or an Imposter makes an incorrect location guess (ousting themselves), or town unanimously votes "No Imposters Left".</li>
+              <li><strong>Imposters Win:</strong> An Imposter correctly guesses the secret location, or living Imposters equal or outnumber living Innocents (50% or more).</li>
             </ul>
           </div>
         </div>
@@ -766,32 +767,44 @@
           </div>
 
           <div class="rule-section">
-            <h4>🎭 Secret Roles</h4>
+            <h4>🎭 Secret Roles & Rules</h4>
             <ul>
-              <li><strong>👑 Host (Narrator):</strong> Runs the game, reads narration prompts aloud, sees all roles in God-mode, and reviews the Secret Action Ledger.</li>
-              <li><strong>🔪 Murderers (1–3):</strong> Secretly choose a victim each night. If split, swap votes live on-screen to reach consensus.</li>
-              <li><strong>💉 Doctor (1):</strong> Protects 1 player each night (can protect self). <em>Rule: Cannot protect the same person two rounds in a row.</em></li>
-              <li><strong>🔍 Detective (1):</strong> Investigates 1 suspect each night. Receives immediate feedback: 🔴 Murderer or 🟢 Not Murderer. Maintains a personal investigation ledger.</li>
+              <li><strong>👑 Host (Narrator):</strong> Paces the game, reads narration scripts aloud, views all secret roles in real-time God-mode, and accesses the round-by-round Secret Action Ledger.</li>
+              <li><strong>🔪 Murderers (1–3):</strong> Secretly choose a victim each night. Murderer teammates see each other and live target selections. If split, a target is randomly chosen from among voted suspects with a secret morning notice.</li>
+              <li><strong>💉 Doctor (1):</strong> Protects 1 living player each night (can protect self). <em>Rule: Cannot protect the same person two rounds in a row.</em></li>
+              <li><strong>🔍 Detective (1):</strong> Investigates 1 suspect each night. Receives immediate truth verdict: 🔴 Murderer or 🟢 Not Murderer. <em>Rule: Cannot re-investigate past suspects.</em> Maintains an in-game investigation notebook.</li>
               <li><strong>😇 Civilians:</strong> Select their favorite alive player during the night to stay active; debate and vote during the day.</li>
             </ul>
           </div>
 
           <div class="rule-section">
-            <h4>🔄 Round Flow</h4>
+            <h4>🔄 8-Phase Round Pipeline</h4>
             <ol>
-              <li><strong>🌙 Unified Night Phase:</strong> All living players make their secret selections on their phones simultaneously (Murderers agree on a victim, Doctor protects, Detective investigates, and Civilians pick a favorite).</li>
-              <li><strong>🌅 Morning Report:</strong> Host announces whether someone was murdered or saved by the Doctor.</li>
-              <li><strong>💬 Town Discussion:</strong> Timed in-person debate (Host can add <code>+30s</code> or skip).</li>
-              <li><strong>🗳️ Secret Town Ballot:</strong> Secret voting ballot with live anonymous vote counts and an <strong>Abstain / Skip</strong> option.</li>
-              <li><strong>📊 Results Tally:</strong> Town votes are tallied to eliminate a suspect.</li>
+              <li><strong>🃏 Role Reveal:</strong> Secretly peek at your assigned role using pointer-captured card flips.</li>
+              <li><strong>🌙 Unified Night:</strong> All living players make secret choices on their phones simultaneously with silent device actions.</li>
+              <li><strong>🌅 Morning Narration Buffer:</strong> Host receives secret night resolution and narrates sunrise aloud to the room while player devices display a suspense buffer.</li>
+              <li><strong>📢 Morning Outcome Banner:</strong> Discloses whether someone was murdered or saved by the Doctor on all player phones.</li>
+              <li><strong>💬 Town Discussion:</strong> In-person debate with live countdown (or Host-paced untimed mode).</li>
+              <li><strong>🗳️ Secret Town Ballot:</strong> Secret voting ballot with live anonymous candidate vote counts, dynamic vote swapping, and an <strong>Abstain / Skip</strong> option.</li>
+              <li><strong>⚖️ Dusk Vote Narration Buffer:</strong> Host narrates the town vote results aloud before revealing outcomes on phones.</li>
+              <li><strong>📊 Day Tally Screen:</strong> Revealed vote distribution, gavel sound effect, and elimination stamp on all screens before advancing to the next Night round or concluding the match.</li>
             </ol>
+          </div>
+
+          <div class="rule-section">
+            <h4>⚙️ House Rules & Settings</h4>
+            <ul>
+              <li><strong>Elimination Vote Rule:</strong> <strong>Plurality</strong> (highest votes eliminated; ties cancel and result in 0 deaths) vs <strong>Strict Majority</strong> (>50% of living voters required; failing threshold results in 0 deaths).</li>
+              <li><strong>Timer Synchronization:</strong> Selecting Infinite / Untimed Discussion (`0s`) in settings automatically sets the voting timer to Untimed (`0s`), with manual finite override support.</li>
+              <li><strong>Murderers Count:</strong> Auto Balanced (1 for up to 8 players, 2 for 9–13, 3 for 14+) or fixed allocation.</li>
+            </ul>
           </div>
 
           <div class="rule-section">
             <h4>🏆 Winning</h4>
             <ul>
-              <li><strong>Civilians Win:</strong> When all Murderers are eliminated!</li>
-              <li><strong>Mafia Wins:</strong> When living Murderers equal or outnumber living Civilians ($\ge$).</li>
+              <li><strong>Civilians Win:</strong> When all Murderers are successfully eliminated!</li>
+              <li><strong>Mafia Wins:</strong> When living Murderers equal or outnumber living Civilians (50% or more of the town).</li>
             </ul>
           </div>
         </div>

@@ -150,11 +150,10 @@ class DayPhaseHandler {
     instance.stopTimer();
     instance.phase = 'day_voting';
     instance.dayVotes.clear();
-    const discIsUntimed = instance.settings && Number(instance.settings.discussionTimer) === 0;
-    const rawVoteDuration = (instance.settings.votingTimer !== undefined && instance.settings.votingTimer !== null)
+    const rawVoteDuration = (instance.settings && instance.settings.votingTimer !== undefined && instance.settings.votingTimer !== null)
       ? Number(instance.settings.votingTimer)
       : 30;
-    const voteDuration = discIsUntimed ? 0 : (isNaN(rawVoteDuration) ? 30 : rawVoteDuration);
+    const voteDuration = isNaN(rawVoteDuration) ? 30 : rawVoteDuration;
     instance.timerSeconds = voteDuration;
 
     if (instance.timerSeconds > 0) {
@@ -183,7 +182,7 @@ class DayPhaseHandler {
     instance.stopTimer();
     instance.phase = 'vote_narration';
 
-    const livingVoters = instance.getLivingPlayerIds().filter(id => id !== instance.hostSocketId);
+    const livingVoters = instance.getLivingPlayerIds().filter(id => id !== instance.hostSocketId && id !== instance.room.hostId);
     const voteCounts = new Map();
     livingVoters.forEach(id => voteCounts.set(id, 0));
     let abstainCount = 0;
@@ -301,12 +300,25 @@ class DayPhaseHandler {
   }
 
   /**
-   * Resolve Vote Narration and Proceed to Next Phase:
-   * Checks if more imposters/murderers remain.
+   * Start Day Phase: Tally Screen Revealed to All Players.
+   */
+  static startDayTally(instance) {
+    instance.stopTimer();
+    instance.phase = 'day_tally';
+
+    if (this.checkWinConditions(instance)) {
+      instance.phase = 'ended';
+    }
+
+    instance.emitEvent('game_state_updated');
+  }
+
+  /**
+   * Resolve Tally Phase and Proceed:
    * If game over -> ended.
    * If murderers remain -> begins Round N+1 Night phase.
    */
-  static resolveVoteNarrationAndProceed(instance) {
+  static resolveTallyAndProceed(instance) {
     instance.stopTimer();
 
     // Check Win Condition
@@ -323,6 +335,11 @@ class DayPhaseHandler {
     instance.round++;
     const NightPhaseHandler = require('./NightPhaseHandler');
     NightPhaseHandler.startNightPhase(instance);
+  }
+
+  // Backwards compatibility alias
+  static resolveVoteNarrationAndProceed(instance) {
+    this.startDayTally(instance);
   }
 
   /**

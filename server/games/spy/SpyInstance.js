@@ -540,6 +540,10 @@ class SpyInstance {
       this.votes.set(newSocketId, target === oldSocketId ? newSocketId : target);
     }
 
+    for (const [voterId, targetId] of this.votes.entries()) {
+      if (targetId === oldSocketId) this.votes.set(voterId, newSocketId);
+    }
+
     if (this.camouflageWords.has(oldSocketId)) {
       const word = this.camouflageWords.get(oldSocketId);
       this.camouflageWords.delete(oldSocketId);

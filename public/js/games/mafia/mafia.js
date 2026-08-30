@@ -52,32 +52,37 @@ const MafiaUI = {
       };
     }
 
-    // Secret Peek Role Card (Safari & Mobile Cross-Platform Support)
+    // Secret Peek Role Card (Mobile & Desktop Pointer Capture)
     const secretCard = document.getElementById('mafiaSecretCard');
     if (secretCard) {
-      const showPeek = (e) => {
-        if (e && e.cancelable && e.type === 'touchstart') e.preventDefault();
+      let isPeeking = false;
+
+      const startPeek = (e) => {
+        if (isPeeking) return;
+        isPeeking = true;
         secretCard.classList.add('is-peeking');
         SoundFX.playCardFlip();
-      };
-      const hidePeek = () => {
-        secretCard.classList.remove('is-peeking');
-      };
-
-      secretCard.addEventListener('pointerdown', showPeek);
-      secretCard.addEventListener('pointerup', hidePeek);
-      secretCard.addEventListener('pointerleave', hidePeek);
-      secretCard.addEventListener('pointercancel', hidePeek);
-
-      secretCard.addEventListener('touchstart', showPeek, { passive: false });
-      secretCard.addEventListener('touchend', hidePeek);
-      secretCard.addEventListener('touchcancel', hidePeek);
-
-      secretCard.addEventListener('click', () => {
-        if (!secretCard.classList.contains('is-peeking')) {
-          secretCard.classList.toggle('is-peeking');
-          SoundFX.playCardFlip();
+        if (e.pointerId !== undefined && secretCard.setPointerCapture) {
+          try { secretCard.setPointerCapture(e.pointerId); } catch (_) {}
         }
+      };
+
+      const stopPeek = (e) => {
+        if (!isPeeking) return;
+        isPeeking = false;
+        secretCard.classList.remove('is-peeking');
+        if (e && e.pointerId !== undefined && secretCard.releasePointerCapture) {
+          try { secretCard.releasePointerCapture(e.pointerId); } catch (_) {}
+        }
+      };
+
+      secretCard.addEventListener('pointerdown', startPeek);
+      secretCard.addEventListener('pointerup', stopPeek);
+      secretCard.addEventListener('pointercancel', stopPeek);
+      secretCard.addEventListener('pointerleave', stopPeek);
+      secretCard.addEventListener('contextmenu', (e) => e.preventDefault());
+      secretCard.addEventListener('click', (e) => {
+        e.preventDefault();
       });
     }
   },
@@ -167,12 +172,13 @@ const MafiaUI = {
     }
 
     if (timerContainer && timerText) {
-      const discIsUntimed = state.settings && Number(state.settings.discussionTimer) === 0;
+      const discTimer = state.settings ? Number(state.settings.discussionTimer) : 180;
+      const voteTimer = state.settings ? Number(state.settings.votingTimer) : 30;
       let isTimed = false;
       if (state.phase === 'day_discussion') {
-        isTimed = !discIsUntimed;
+        isTimed = !isNaN(discTimer) && discTimer > 0;
       } else if (state.phase === 'day_voting') {
-        isTimed = !discIsUntimed && state.settings && Number(state.settings.votingTimer) > 0;
+        isTimed = !isNaN(voteTimer) && voteTimer > 0;
       }
 
       const showTimer = (state.phase === 'day_discussion' || state.phase === 'day_voting') && !state.winner;
@@ -192,12 +198,13 @@ const MafiaUI = {
     // Host Timer Quick Controls in Header
     const hostTimerControls = document.getElementById('mafiaHostTimerControls');
     if (hostTimerControls) {
-      const discIsUntimed = state.settings && Number(state.settings.discussionTimer) === 0;
+      const discTimer = state.settings ? Number(state.settings.discussionTimer) : 180;
+      const voteTimer = state.settings ? Number(state.settings.votingTimer) : 30;
       let isTimed = false;
       if (state.phase === 'day_discussion') {
-        isTimed = !discIsUntimed;
+        isTimed = !isNaN(discTimer) && discTimer > 0;
       } else if (state.phase === 'day_voting') {
-        isTimed = !discIsUntimed && state.settings && Number(state.settings.votingTimer) > 0;
+        isTimed = !isNaN(voteTimer) && voteTimer > 0;
       }
       const canControl = state.isHost && (state.phase === 'day_discussion' || state.phase === 'day_voting') && !state.winner && isTimed;
       hostTimerControls.classList.toggle('hidden', !canControl);
