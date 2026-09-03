@@ -7,6 +7,9 @@ const GameRegistry = require('../server/core/GameRegistry');
 const RoomManager = require('../server/core/RoomManager');
 const { registerSocketHandlers } = require('../server/sockets/socketHandler');
 
+const path = require('path');
+const { createApiRouter } = require('../server/routes/api');
+
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -34,6 +37,10 @@ async function setupTestServer() {
   GameRegistry.loadGames();
   const roomManager = new RoomManager(ioServer);
   registerSocketHandlers(ioServer, roomManager);
+
+  app.use(express.json());
+  app.use(express.static(path.join(__dirname, '../public')));
+  app.use('/api', createApiRouter(roomManager));
 
   await new Promise(resolve => server.listen(3999, '127.0.0.1', resolve));
   activeServer = server;
@@ -238,7 +245,8 @@ async function runExhaustiveBetaSuite() {
     const reconAck = await new Promise(r => reconnectedMur.emit('join_room', { roomCode, playerName: mur.playerName, avatar: mur.avatar, pin: '1234' }, r));
     assert(reconAck && reconAck.success, 'Murderer reconnected mid-game with state preserved');
 
-    doc.emit('game_action', { action: 'doctor_save', targetId: bots[0].id });
+    const livingBots = bots.filter(b => b.playerName !== mur.playerName);
+    doc.emit('game_action', { action: 'doctor_save', targetId: livingBots[0].id });
     host.emit('game_action', { action: 'host_advance_phase' }); // morning_narration
     await waitForState(host, s => s.phase === 'morning_narration');
     host.emit('game_action', { action: 'host_advance_phase' }); // day_morning
@@ -249,7 +257,6 @@ async function runExhaustiveBetaSuite() {
     await waitForState(host, s => s.phase === 'day_voting');
 
     // Vote split (2 for B0, 2 for B1, 2 abstains)
-    const livingBots = bots.filter(b => b.playerName !== mur.playerName);
     livingBots[0].emit('game_action', { action: 'submit_day_vote', targetId: livingBots[1].id });
     livingBots[1].emit('game_action', { action: 'submit_day_vote', targetId: livingBots[0].id });
     livingBots[2].emit('game_action', { action: 'submit_day_vote', targetId: livingBots[0].id });
@@ -268,10 +275,10 @@ async function runExhaustiveBetaSuite() {
     await waitForState(host, s => s.phase === 'night' && s.round === 2);
 
     // Consecutive save restriction
-    doc.emit('game_action', { action: 'doctor_save', targetId: bots[0].id });
+    doc.emit('game_action', { action: 'doctor_save', targetId: livingBots[0].id });
     await delay(100);
     const docR2 = getLatestState(doc);
-    assert(!docR2.doctorData || docR2.doctorData.currentSavedTargetId !== bots[0].id, 'Doctor consecutive save restriction enforced');
+    assert(!docR2.doctorData || docR2.doctorData.currentSavedTargetId !== livingBots[0].id, 'Doctor consecutive save restriction enforced');
 
     host.disconnect();
     bots.forEach(b => b.disconnect());
@@ -360,7 +367,7 @@ async function runExhaustiveBetaSuite() {
     assert(!getLatestState(host).currentClue, 'Inactive Spymaster blocked from giving clues out of turn');
 
     // Red Spymaster valid clue
-    host.emit('game_action', { action: 'submit_clue', word: 'OCEAN', count: 1 });
+    host.emit('game_action', { action: 'submit_clue', word: 'OCEAN', count: 2 });
     await waitForState(redOp, s => s.currentRole === 'operative');
 
     // Spymaster cannot tap cards
@@ -368,6 +375,12 @@ async function runExhaustiveBetaSuite() {
     host.emit('game_action', { action: 'guess_card', cardId: assassinCard.id });
     await delay(50);
     assert(!getLatestState(host).grid.find(c => c.id === assassinCard.id).revealed, 'Spymasters strictly blocked from tapping cards');
+
+    // Operative correct guess does not reset timer
+    const redCard = getLatestState(host).grid.find(c => c.type === 'red');
+    redOp.emit('game_action', { action: 'guess_card', cardId: redCard.id });
+    await waitForState(host, s => s.grid.find(c => c.id === redCard.id).revealed);
+    assert(getLatestState(host).currentClue.guessesLeft === 1, 'Operative correct guess decremented guessesLeft');
 
     // Soft assassin guess
     redOp.emit('game_action', { action: 'guess_card', cardId: assassinCard.id });

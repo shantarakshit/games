@@ -319,8 +319,6 @@ class CodenamesInstance {
         this.currentClue.guessesLeft--;
         if (this.currentClue.guessesLeft <= 0) {
           this.endTurn(player, 'out_of_guesses');
-        } else {
-          this.resetTurnTimer();
         }
       }
     }
